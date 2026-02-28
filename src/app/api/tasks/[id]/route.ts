@@ -99,6 +99,8 @@ export async function PATCH(
 
     // Track if we need to dispatch task
     let shouldDispatch = false;
+    // Track if the agent should be set back to standby
+    let shouldResetAgent = false;
 
     // Handle status change
     if (validatedData.status !== undefined && validatedData.status !== existing.status) {
@@ -108,6 +110,12 @@ export async function PATCH(
       // Auto-dispatch when moving to assigned
       if (validatedData.status === 'assigned' && existing.assigned_agent_id) {
         shouldDispatch = true;
+      }
+
+      // Reset assigned agent to standby when task leaves in_progress
+      // (agent finished working; covers review, testing, done, or any manual move)
+      if (existing.status === 'in_progress' && existing.assigned_agent_id) {
+        shouldResetAgent = true;
       }
 
       // Log status change event
@@ -150,6 +158,22 @@ export async function PATCH(
     values.push(id);
 
     run(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`, values);
+
+    // Reset agent to standby when task leaves in_progress
+    if (shouldResetAgent && existing.assigned_agent_id) {
+      run(
+        'UPDATE agents SET status = ?, updated_at = ? WHERE id = ?',
+        ['standby', now, existing.assigned_agent_id]
+      );
+
+      const updatedAgent = queryOne<Agent>('SELECT * FROM agents WHERE id = ?', [existing.assigned_agent_id]);
+      if (updatedAgent) {
+        broadcast({
+          type: 'agent_updated',
+          payload: updatedAgent,
+        });
+      }
+    }
 
     // Fetch updated task with all joined fields
     const task = queryOne<Task>(

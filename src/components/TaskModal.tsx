@@ -258,6 +258,11 @@ export function TaskModal({ task, onClose, workspaceId }: TaskModalProps) {
                   </option>
                 ))}
               </select>
+              {form.status === 'assigned' && !form.assigned_agent_id && (
+                <p className="text-xs text-mc-accent-yellow mt-1">
+                  ⚠️ Assign an agent to dispatch this task
+                </p>
+              )}
             </div>
 
             {/* Priority */}
@@ -286,7 +291,17 @@ export function TaskModal({ task, onClose, workspaceId }: TaskModalProps) {
                 if (e.target.value === '__add_new__') {
                   setShowAgentModal(true);
                 } else {
-                  setForm({ ...form, assigned_agent_id: e.target.value });
+                  const newAgentId = e.target.value;
+                  const updatedForm = { ...form, assigned_agent_id: newAgentId };
+                  // Auto-advance status when assigning an agent to an inbox task
+                  if (newAgentId !== '' && form.status === 'inbox') {
+                    updatedForm.status = 'assigned';
+                  }
+                  // Auto-revert status when removing agent from an assigned task
+                  if (newAgentId === '' && form.status === 'assigned') {
+                    updatedForm.status = 'inbox';
+                  }
+                  setForm(updatedForm);
                 }
               }}
               className="w-full bg-mc-bg border border-mc-border rounded px-3 py-2 text-sm focus:outline-none focus:border-mc-accent"
