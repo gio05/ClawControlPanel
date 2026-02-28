@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { createHmac } from 'crypto';
 import { queryOne, queryAll, run } from '@/lib/db';
+import { broadcast } from '@/lib/events';
 import type { Task, Agent, OpenClawSession } from '@/lib/types';
 
 /**
@@ -107,6 +108,18 @@ export async function POST(request: NextRequest) {
           'UPDATE agents SET status = ?, updated_at = ? WHERE id = ?',
           ['standby', now, task.assigned_agent_id]
         );
+
+        // Broadcast agent status change via SSE
+        const updatedAgent = queryOne<Agent>('SELECT * FROM agents WHERE id = ?', [task.assigned_agent_id]);
+        if (updatedAgent) {
+          broadcast({ type: 'agent_updated', payload: updatedAgent });
+        }
+      }
+
+      // Broadcast task update via SSE
+      const updatedTask = queryOne<Task>('SELECT * FROM tasks WHERE id = ?', [task.id]);
+      if (updatedTask) {
+        broadcast({ type: 'task_updated', payload: updatedTask });
       }
 
       return NextResponse.json({
@@ -190,6 +203,18 @@ export async function POST(request: NextRequest) {
         'UPDATE agents SET status = ?, updated_at = ? WHERE id = ?',
         ['standby', now, session.agent_id]
       );
+
+      // Broadcast agent status change via SSE
+      const updatedAgent = queryOne<Agent>('SELECT * FROM agents WHERE id = ?', [session.agent_id]);
+      if (updatedAgent) {
+        broadcast({ type: 'agent_updated', payload: updatedAgent });
+      }
+
+      // Broadcast task update via SSE
+      const updatedTask = queryOne<Task>('SELECT * FROM tasks WHERE id = ?', [task.id]);
+      if (updatedTask) {
+        broadcast({ type: 'task_updated', payload: updatedTask });
+      }
 
       return NextResponse.json({
         success: true,
