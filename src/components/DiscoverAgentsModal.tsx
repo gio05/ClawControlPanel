@@ -26,7 +26,6 @@ import {
 } from '@mui/icons-material';
 import { useMissionControl } from '@/lib/store';
 import type { DiscoveredAgent } from '@/lib/types';
-import { mcColors } from '@/theme/theme';
 
 interface DiscoverAgentsModalProps {
   onClose: () => void;

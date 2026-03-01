@@ -18,19 +18,19 @@ export default function DemoBanner() {
   return (
     <Box
       sx={{
-        background: 'linear-gradient(90deg, #2563eb, #9333ea, #2563eb)',
+        background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #6366f1 100%)',
         color: 'white',
         textAlign: 'center',
-        py: 1,
+        py: 0.75,
         px: 2,
-        fontSize: '0.875rem',
+        fontSize: '0.8125rem',
         fontWeight: 500,
         position: 'relative',
         zIndex: 50,
       }}
     >
-      <Typography component="span" sx={{ mr: 1 }}>🎮</Typography>
-      <Typography component="span" variant="body2">
+      <Typography component="span" sx={{ mr: 1, fontSize: '0.875rem' }}>✨</Typography>
+      <Typography component="span" variant="body2" sx={{ fontWeight: 500 }}>
         Live Demo — AI agents are working in real-time. This is a read-only simulation.
       </Typography>
       <MuiLink
@@ -41,7 +41,8 @@ export default function DemoBanner() {
           ml: 1.5,
           color: 'inherit',
           textDecoration: 'underline',
-          '&:hover': { color: '#93c5fd' },
+          fontWeight: 600,
+          '&:hover': { color: 'rgba(255,255,255,0.85)' },
         }}
       >
         Get Mission Control →

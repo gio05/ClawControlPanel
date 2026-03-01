@@ -20,6 +20,8 @@ import {
   Tabs,
   Tab,
   Stack,
+  alpha,
+  useTheme,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -39,7 +41,7 @@ import { SessionsList } from './SessionsList';
 import { PlanningTab } from './PlanningTab';
 import { AgentModal } from './AgentModal';
 import type { Task, TaskPriority, TaskStatus } from '@/lib/types';
-import { mcColors } from '@/theme/theme';
+import { getColors } from '@/theme/theme';
 
 type TabType = 'overview' | 'planning' | 'activity' | 'deliverables' | 'sessions';
 
@@ -50,6 +52,8 @@ interface TaskModalProps {
 }
 
 export function TaskModal({ task, onClose, workspaceId }: TaskModalProps) {
+  const theme = useTheme();
+  const colors = getColors(theme.palette.mode);
   const { agents, addTask, updateTask, addEvent } = useMissionControl();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAgentModal, setShowAgentModal] = useState(false);
@@ -171,11 +175,18 @@ export function TaskModal({ task, onClose, workspaceId }: TaskModalProps) {
     <>
       <Dialog open onClose={onClose} maxWidth="md" fullWidth sx={{ '& .MuiDialog-paper': { maxHeight: '90vh' } }}>
         {/* Header */}
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h6">
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: 1, borderColor: 'divider', py: 2 }}>
+          <Typography variant="h6" fontWeight={600}>
             {task ? task.title : 'Create New Task'}
           </Typography>
-          <IconButton onClick={onClose} size="small">
+          <IconButton 
+            onClick={onClose} 
+            size="small"
+            sx={{ 
+              color: 'text.secondary',
+              '&:hover': { color: colors.accent },
+            }}
+          >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
@@ -185,7 +196,7 @@ export function TaskModal({ task, onClose, workspaceId }: TaskModalProps) {
           <Tabs
             value={activeTab}
             onChange={(_, value) => setActiveTab(value)}
-            sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
+            sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}
           >
             <Tab value="overview" label="Overview" />
             <Tab value="planning" label="Planning" icon={<ClipboardIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
@@ -222,11 +233,11 @@ export function TaskModal({ task, onClose, workspaceId }: TaskModalProps) {
                 {!task && (
                   <Box
                     sx={{
-                      p: 2,
-                      bgcolor: 'background.default',
-                      borderRadius: 1,
+                      p: 2.5,
+                      bgcolor: alpha(colors.accent, 0.04),
+                      borderRadius: 2.5,
                       border: 1,
-                      borderColor: 'divider',
+                      borderColor: alpha(colors.accent, 0.1),
                     }}
                   >
                     <FormControlLabel
@@ -234,17 +245,21 @@ export function TaskModal({ task, onClose, workspaceId }: TaskModalProps) {
                         <Checkbox
                           checked={usePlanningMode}
                           onChange={(e) => setUsePlanningMode(e.target.checked)}
+                          sx={{
+                            color: colors.accent,
+                            '&.Mui-checked': { color: colors.accent },
+                          }}
                         />
                       }
                       label={
                         <Box>
                           <Stack direction="row" alignItems="center" spacing={1}>
-                            <ClipboardIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-                            <Typography variant="body2" fontWeight="medium">
+                            <ClipboardIcon sx={{ fontSize: 16, color: colors.accent }} />
+                            <Typography variant="body2" fontWeight={600}>
                               Enable Planning Mode
                             </Typography>
                           </Stack>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, lineHeight: 1.5 }}>
                             Best for complex projects that need detailed requirements. 
                             You&apos;ll answer a few questions to define scope, goals, and constraints 
                             before work begins. Skip this for quick, straightforward tasks.

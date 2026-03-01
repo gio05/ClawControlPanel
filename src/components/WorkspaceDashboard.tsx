@@ -17,6 +17,8 @@ import {
   TextField,
   Stack,
   Alert,
+  alpha,
+  useTheme,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -28,9 +30,11 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import type { WorkspaceStats } from '@/lib/types';
-import { mcColors } from '@/theme/theme';
+import { getColors } from '@/theme/theme';
 
 export function WorkspaceDashboard() {
+  const theme = useTheme();
+  const colors = getColors(theme.palette.mode);
   const [workspaces, setWorkspaces] = useState<WorkspaceStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -64,11 +68,22 @@ export function WorkspaceDashboard() {
           justifyContent: 'center',
         }}
       >
-        <Stack alignItems="center" spacing={2}>
-          <Typography variant="h2" sx={{ animation: 'pulse 2s infinite' }}>
-            🦞
-          </Typography>
-          <Typography color="text.secondary">Loading workspaces...</Typography>
+        <Stack alignItems="center" spacing={3}>
+          <Box
+            sx={{
+              width: 64,
+              height: 64,
+              borderRadius: 3,
+              bgcolor: alpha(colors.accent, 0.1),
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              animation: 'pulse 2s infinite',
+            }}
+          >
+            <Typography variant="h3">🦞</Typography>
+          </Box>
+          <Typography color="text.secondary" fontWeight={500}>Loading workspaces...</Typography>
         </Stack>
       </Box>
     );
@@ -89,16 +104,28 @@ export function WorkspaceDashboard() {
           sx={{
             maxWidth: '1200px',
             mx: 'auto',
-            px: 3,
-            py: 2,
+            px: 4,
+            py: 2.5,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Typography variant="h4">🦞</Typography>
-            <Typography variant="h6" fontWeight="bold">
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2.5,
+                bgcolor: alpha(colors.accent, 0.1),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Typography variant="h5">🦞</Typography>
+            </Box>
+            <Typography variant="h6" fontWeight={700} sx={{ letterSpacing: '-0.02em' }}>
               Mission Control
             </Typography>
           </Stack>
@@ -106,6 +133,10 @@ export function WorkspaceDashboard() {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setShowCreateModal(true)}
+            sx={{
+              bgcolor: colors.accent,
+              '&:hover': { bgcolor: colors.accentHover },
+            }}
           >
             New Workspace
           </Button>
@@ -113,26 +144,48 @@ export function WorkspaceDashboard() {
       </Box>
 
       {/* Main Content */}
-      <Box component="main" sx={{ maxWidth: '1200px', mx: 'auto', px: 3, py: 4 }}>
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h5" fontWeight="bold" gutterBottom>
+      <Box component="main" sx={{ maxWidth: '1200px', mx: 'auto', px: 4, py: 5 }}>
+        <Box sx={{ mb: 5 }}>
+          <Typography variant="h4" fontWeight={700} gutterBottom sx={{ letterSpacing: '-0.02em' }}>
             All Workspaces
           </Typography>
-          <Typography color="text.secondary">
+          <Typography color="text.secondary" sx={{ fontSize: '1rem' }}>
             Select a workspace to view its mission queue and agents
           </Typography>
         </Box>
 
         {workspaces.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <FolderIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h6" gutterBottom>
+          <Box sx={{ textAlign: 'center', py: 10 }}>
+            <Box
+              sx={{
+                width: 80,
+                height: 80,
+                borderRadius: 4,
+                bgcolor: colors.bgTertiary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 3,
+              }}
+            >
+              <FolderIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
+            </Box>
+            <Typography variant="h6" fontWeight={600} gutterBottom>
               No workspaces yet
             </Typography>
-            <Typography color="text.secondary" sx={{ mb: 3 }}>
+            <Typography color="text.secondary" sx={{ mb: 4 }}>
               Create your first workspace to get started
             </Typography>
-            <Button variant="contained" onClick={() => setShowCreateModal(true)}>
+            <Button 
+              variant="contained" 
+              size="large"
+              onClick={() => setShowCreateModal(true)}
+              sx={{
+                bgcolor: colors.accent,
+                '&:hover': { bgcolor: colors.accentHover },
+              }}
+            >
               Create Workspace
             </Button>
           </Box>
@@ -153,35 +206,37 @@ export function WorkspaceDashboard() {
                 sx={{
                   border: 2,
                   borderStyle: 'dashed',
-                  borderColor: 'divider',
+                  borderColor: colors.border,
                   bgcolor: 'transparent',
-                  minHeight: 200,
+                  minHeight: 220,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  transition: 'border-color 0.2s',
+                  transition: 'all 0.2s ease-in-out',
                   '&:hover': {
-                    borderColor: 'primary.main',
+                    borderColor: colors.accent,
+                    bgcolor: alpha(colors.accent, 0.02),
                   },
                 }}
                 onClick={() => setShowCreateModal(true)}
               >
-                <Stack alignItems="center" spacing={1.5}>
+                <Stack alignItems="center" spacing={2}>
                   <Box
                     sx={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: '50%',
-                      bgcolor: mcColors.bgTertiary,
+                      width: 56,
+                      height: 56,
+                      borderRadius: 3,
+                      bgcolor: colors.bgTertiary,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      transition: 'all 0.2s',
                     }}
                   >
-                    <AddIcon color="action" />
+                    <AddIcon sx={{ color: 'text.secondary', fontSize: 28 }} />
                   </Box>
-                  <Typography color="text.secondary" fontWeight="medium">
+                  <Typography color="text.secondary" fontWeight={500}>
                     Add Workspace
                   </Typography>
                 </Stack>
@@ -212,6 +267,8 @@ function WorkspaceCard({
   workspace: WorkspaceStats;
   onDelete: (id: string) => void;
 }) {
+  const theme = useTheme();
+  const colors = getColors(theme.palette.mode);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -240,32 +297,50 @@ function WorkspaceCard({
       <Link href={`/workspace/${workspace.slug}`} style={{ textDecoration: 'none' }}>
         <Card
           sx={{
-            transition: 'all 0.2s',
+            transition: 'all 0.2s ease-in-out',
+            minHeight: 180,
             '&:hover': {
-              borderColor: 'primary.main',
-              boxShadow: 4,
+              borderColor: alpha(colors.accent, 0.4),
+              transform: 'translateY(-2px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
             },
             '&:hover .delete-btn': {
               opacity: 1,
             },
             '&:hover .arrow-icon': {
-              color: 'primary.main',
+              color: colors.accent,
+              transform: 'translateX(4px)',
             },
           }}
         >
           <CardContent sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-              <Stack direction="row" alignItems="center" spacing={1.5}>
-                <Typography variant="h4">{workspace.icon}</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3 }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 2.5,
+                    bgcolor: alpha(colors.accent, 0.08),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Typography variant="h4">{workspace.icon}</Typography>
+                </Box>
                 <Box>
                   <Typography
-                    variant="subtitle1"
-                    fontWeight="semibold"
-                    sx={{ '&:hover': { color: 'primary.main' } }}
+                    variant="h6"
+                    fontWeight={600}
+                    sx={{ 
+                      color: 'text.primary',
+                      letterSpacing: '-0.01em',
+                    }}
                   >
                     {workspace.name}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.8 }}>
                     /{workspace.slug}
                   </Typography>
                 </Box>
@@ -282,10 +357,10 @@ function WorkspaceCard({
                     }}
                     sx={{
                       opacity: 0,
-                      transition: 'opacity 0.2s',
+                      transition: 'all 0.2s',
                       '&:hover': {
-                        bgcolor: 'error.main',
-                        color: 'error.contrastText',
+                        bgcolor: colors.accentRedBg,
+                        color: colors.accentRed,
                       },
                     }}
                   >
@@ -294,21 +369,49 @@ function WorkspaceCard({
                 )}
                 <ArrowForwardIcon
                   className="arrow-icon"
-                  sx={{ color: 'text.secondary', transition: 'color 0.2s' }}
+                  sx={{ 
+                    color: 'text.secondary', 
+                    transition: 'all 0.2s',
+                    fontSize: 20,
+                  }}
                 />
               </Stack>
             </Box>
 
-            <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                <CheckBoxIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                <Typography variant="body2" color="text.secondary">
+            <Stack direction="row" spacing={3}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Box
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 1.5,
+                    bgcolor: colors.accentBlueBg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <CheckBoxIcon sx={{ fontSize: 14, color: colors.accentBlue }} />
+                </Box>
+                <Typography variant="body2" color="text.secondary" fontWeight={500}>
                   {workspace.taskCounts.total} tasks
                 </Typography>
               </Stack>
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                <PeopleIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                <Typography variant="body2" color="text.secondary">
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Box
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 1.5,
+                    bgcolor: colors.accentPurpleBg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <PeopleIcon sx={{ fontSize: 14, color: colors.accentPurple }} />
+                </Box>
+                <Typography variant="body2" color="text.secondary" fontWeight={500}>
                   {workspace.agentCount} agents
                 </Typography>
               </Stack>
@@ -327,16 +430,19 @@ function WorkspaceCard({
           <Stack direction="row" alignItems="center" spacing={2}>
             <Box
               sx={{
-                p: 1.5,
-                borderRadius: '50%',
-                bgcolor: 'error.main',
-                opacity: 0.2,
+                width: 48,
+                height: 48,
+                borderRadius: 2.5,
+                bgcolor: colors.accentRedBg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <WarningIcon color="error" />
+              <WarningIcon sx={{ color: colors.accentRed }} />
             </Box>
             <Box>
-              <Typography variant="h6">Delete Workspace</Typography>
+              <Typography variant="h6" fontWeight={600}>Delete Workspace</Typography>
               <Typography variant="body2" color="text.secondary">
                 This action cannot be undone
               </Typography>
@@ -357,9 +463,12 @@ function WorkspaceCard({
           <Button onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
           <Button
             variant="contained"
-            color="error"
             onClick={handleDelete}
             disabled={deleting || workspace.taskCounts.total > 0 || workspace.agentCount > 0}
+            sx={{
+              bgcolor: colors.accentRed,
+              '&:hover': { bgcolor: alpha(colors.accentRed, 0.9) },
+            }}
           >
             {deleting ? 'Deleting...' : 'Delete Workspace'}
           </Button>
@@ -376,6 +485,8 @@ function CreateWorkspaceModal({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const theme = useTheme();
+  const colors = getColors(theme.palette.mode);
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('📁');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -412,35 +523,36 @@ function CreateWorkspaceModal({
 
   return (
     <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Create New Workspace</DialogTitle>
+      <DialogTitle sx={{ fontWeight: 600 }}>Create New Workspace</DialogTitle>
       <form onSubmit={handleSubmit}>
         <DialogContent>
-          <Stack spacing={3}>
+          <Stack spacing={4}>
             {/* Icon selector */}
             <Box>
-              <Typography variant="body2" fontWeight="medium" gutterBottom>
+              <Typography variant="body2" fontWeight={600} gutterBottom color="text.secondary">
                 Icon
               </Typography>
-              <Stack direction="row" flexWrap="wrap" gap={1}>
+              <Stack direction="row" flexWrap="wrap" gap={1.5}>
                 {icons.map((i) => (
                   <Box
                     key={i}
                     onClick={() => setIcon(i)}
                     sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 1,
+                      width: 44,
+                      height: 44,
+                      borderRadius: 2,
                       fontSize: '1.25rem',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
                       border: 2,
-                      borderColor: icon === i ? 'primary.main' : 'divider',
-                      bgcolor: icon === i ? 'primary.dark' : 'background.default',
-                      transition: 'all 0.2s',
+                      borderColor: icon === i ? colors.accent : colors.border,
+                      bgcolor: icon === i ? alpha(colors.accent, 0.1) : 'transparent',
+                      transition: 'all 0.15s ease-in-out',
                       '&:hover': {
-                        borderColor: 'primary.main',
+                        borderColor: colors.accent,
+                        bgcolor: alpha(colors.accent, 0.05),
                       },
                     }}
                   >
@@ -452,7 +564,7 @@ function CreateWorkspaceModal({
 
             {/* Name input */}
             <TextField
-              label="Name"
+              label="Workspace Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Acme Corp"
@@ -469,6 +581,10 @@ function CreateWorkspaceModal({
             type="submit"
             variant="contained"
             disabled={!name.trim() || isSubmitting}
+            sx={{
+              bgcolor: colors.accent,
+              '&:hover': { bgcolor: colors.accentHover },
+            }}
           >
             {isSubmitting ? 'Creating...' : 'Create Workspace'}
           </Button>

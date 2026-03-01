@@ -20,6 +20,8 @@ import {
   Tabs,
   Tab,
   Stack,
+  alpha,
+  useTheme,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -28,7 +30,7 @@ import {
 } from '@mui/icons-material';
 import { useMissionControl } from '@/lib/store';
 import type { Agent, AgentStatus } from '@/lib/types';
-import { mcColors } from '@/theme/theme';
+import { getColors } from '@/theme/theme';
 
 interface AgentModalProps {
   agent?: Agent;
@@ -40,6 +42,8 @@ interface AgentModalProps {
 const EMOJI_OPTIONS = ['🤖', '🦞', '💻', '🔍', '✍️', '🎨', '📊', '🧠', '⚡', '🚀', '🎯', '🔧'];
 
 export function AgentModal({ agent, onClose, workspaceId, onAgentCreated }: AgentModalProps) {
+  const theme = useTheme();
+  const colors = getColors(theme.palette.mode);
   const { addAgent, updateAgent } = useMissionControl();
   const [activeTab, setActiveTab] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -174,12 +178,12 @@ export function AgentModal({ agent, onClose, workspaceId, onAgentCreated }: Agen
                       sx={{
                         fontSize: '1.5rem',
                         p: 1,
-                        borderRadius: 1,
+                        borderRadius: 2,
                         cursor: 'pointer',
                         border: 2,
                         borderColor: form.avatar_emoji === emoji ? 'primary.main' : 'transparent',
-                        bgcolor: form.avatar_emoji === emoji ? `${mcColors.accent}20` : 'transparent',
-                        '&:hover': { bgcolor: mcColors.bgTertiary },
+                        bgcolor: form.avatar_emoji === emoji ? alpha(colors.accent, 0.12) : 'transparent',
+                        '&:hover': { bgcolor: alpha(colors.accent, 0.08) },
                       }}
                     >
                       {emoji}

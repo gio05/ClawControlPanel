@@ -8,6 +8,7 @@ import {
   CircularProgress,
   IconButton,
   Chip,
+  useTheme,
 } from '@mui/material';
 import {
   SmartToy as BotIcon,
@@ -17,7 +18,7 @@ import {
   Delete as DeleteIcon,
   Check as CheckIcon,
 } from '@mui/icons-material';
-import { mcColors } from '@/theme/theme';
+import { getColors } from '@/theme/theme';
 
 interface SessionWithAgent {
   id: string;
@@ -39,6 +40,8 @@ interface SessionsListProps {
 }
 
 export function SessionsList({ taskId }: SessionsListProps) {
+  const theme = useTheme();
+  const colors = getColors(theme.palette.mode);
   const [sessions, setSessions] = useState<SessionWithAgent[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,11 +66,11 @@ export function SessionsList({ taskId }: SessionsListProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'active':
-        return <CircleIcon sx={{ color: mcColors.accentGreen, animation: 'pulse 2s infinite' }} />;
+        return <CircleIcon sx={{ color: colors.accentGreen, animation: 'pulse 2s infinite' }} />;
       case 'completed':
-        return <CheckCircleIcon sx={{ color: mcColors.accent }} />;
+        return <CheckCircleIcon sx={{ color: colors.accent }} />;
       case 'failed':
-        return <XCircleIcon sx={{ color: mcColors.accentRed }} />;
+        return <XCircleIcon sx={{ color: colors.accentRed }} />;
       default:
         return <CircleIcon color="action" />;
     }
@@ -220,7 +223,7 @@ export function SessionsList({ taskId }: SessionsListProps) {
                 size="small"
                 onClick={() => handleMarkComplete(session.openclaw_session_id)}
                 title="Mark as complete"
-                sx={{ color: mcColors.accentGreen }}
+                sx={{ color: colors.accentGreen }}
               >
                 <CheckIcon sx={{ fontSize: 16 }} />
               </IconButton>
@@ -229,7 +232,7 @@ export function SessionsList({ taskId }: SessionsListProps) {
               size="small"
               onClick={() => handleDelete(session.openclaw_session_id)}
               title="Delete session"
-              sx={{ color: 'text.secondary', '&:hover': { color: mcColors.accentRed } }}
+              sx={{ color: 'text.secondary', '&:hover': { color: colors.accentRed } }}
             >
               <DeleteIcon sx={{ fontSize: 16 }} />
             </IconButton>

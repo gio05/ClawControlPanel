@@ -17,6 +17,8 @@ import {
   Alert,
   Paper,
   IconButton,
+  alpha,
+  useTheme,
 } from '@mui/material';
 import {
   Settings as SettingsIcon,
@@ -27,10 +29,12 @@ import {
   Link as LinkIcon,
 } from '@mui/icons-material';
 import { getConfig, updateConfig, resetConfig, type MissionControlConfig } from '@/lib/config';
-import { mcColors } from '@/theme/theme';
+import { getColors } from '@/theme/theme';
 
 export default function SettingsPage() {
   const router = useRouter();
+  const theme = useTheme();
+  const colors = getColors(theme.palette.mode);
   const [config, setConfig] = useState<MissionControlConfig | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -85,20 +89,47 @@ export default function SettingsPage() {
       {/* Header */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
         <Container maxWidth="md">
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ py: 2 }}>
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <IconButton onClick={() => router.push('/')} title="Back to Mission Control">
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ py: 2.5 }}>
+            <Stack direction="row" alignItems="center" spacing={2.5}>
+              <IconButton 
+                onClick={() => router.push('/')} 
+                title="Back to Mission Control"
+                sx={{ 
+                  color: 'text.secondary',
+                  '&:hover': { color: colors.accent },
+                }}
+              >
                 <ArrowBackIcon />
               </IconButton>
-              <SettingsIcon color="primary" />
-              <Typography variant="h5" fontWeight="bold">Settings</Typography>
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 2,
+                  bgcolor: alpha(colors.accent, 0.1),
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <SettingsIcon sx={{ color: colors.accent }} />
+              </Box>
+              <Typography variant="h5" fontWeight={700} sx={{ letterSpacing: '-0.02em' }}>Settings</Typography>
             </Stack>
 
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={1.5}>
               <Button
                 onClick={handleReset}
                 startIcon={<RefreshIcon />}
                 variant="outlined"
+                sx={{
+                  borderColor: colors.border,
+                  color: 'text.secondary',
+                  '&:hover': {
+                    borderColor: colors.accent,
+                    color: colors.accent,
+                  },
+                }}
               >
                 Reset to Defaults
               </Button>
@@ -107,6 +138,10 @@ export default function SettingsPage() {
                 disabled={isSaving}
                 startIcon={<SaveIcon />}
                 variant="contained"
+                sx={{
+                  bgcolor: colors.accent,
+                  '&:hover': { bgcolor: colors.accentHover },
+                }}
               >
                 {isSaving ? 'Saving...' : 'Save Changes'}
               </Button>
@@ -116,28 +151,40 @@ export default function SettingsPage() {
       </Box>
 
       {/* Content */}
-      <Container maxWidth="md" sx={{ py: 4 }}>
+      <Container maxWidth="md" sx={{ py: 5 }}>
         {/* Success Message */}
         {saveSuccess && (
-          <Alert severity="success" sx={{ mb: 3 }}>
+          <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
             ✓ Settings saved successfully
           </Alert>
         )}
 
         {/* Error Message */}
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
             ✗ {error}
           </Alert>
         )}
 
         {/* Workspace Paths */}
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-            <FolderIcon color="primary" />
-            <Typography variant="h6">Workspace Paths</Typography>
+        <Paper sx={{ p: 4, mb: 3, borderRadius: 3 }}>
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: 1.5,
+                bgcolor: alpha(colors.accent, 0.1),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <FolderIcon sx={{ color: colors.accent, fontSize: 18 }} />
+            </Box>
+            <Typography variant="h6" fontWeight={600}>Workspace Paths</Typography>
           </Stack>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.6 }}>
             Configure where Mission Control stores projects and deliverables.
           </Typography>
 
@@ -172,12 +219,24 @@ export default function SettingsPage() {
         </Paper>
 
         {/* API Configuration */}
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-            <LinkIcon color="primary" />
-            <Typography variant="h6">API Configuration</Typography>
+        <Paper sx={{ p: 4, mb: 3, borderRadius: 3 }}>
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: 1.5,
+                bgcolor: alpha(colors.accent, 0.1),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <LinkIcon sx={{ color: colors.accent, fontSize: 18 }} />
+            </Box>
+            <Typography variant="h6" fontWeight={600}>API Configuration</Typography>
           </Stack>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.6 }}>
             Configure Mission Control API URL for agent orchestration.
           </Typography>
 
@@ -192,25 +251,25 @@ export default function SettingsPage() {
         </Paper>
 
         {/* Environment Variables Note */}
-        <Paper sx={{ p: 3, bgcolor: `${mcColors.accent}10`, border: 1, borderColor: `${mcColors.accent}30` }}>
-          <Typography variant="h6" sx={{ color: mcColors.accent, mb: 1 }}>
+        <Paper sx={{ p: 4, bgcolor: alpha(colors.accent, 0.04), border: 1, borderColor: alpha(colors.accent, 0.15), borderRadius: 3 }}>
+          <Typography variant="h6" fontWeight={600} sx={{ color: colors.accent, mb: 1.5 }}>
             📝 Environment Variables
           </Typography>
-          <Typography variant="body2" sx={{ color: mcColors.accent, mb: 2 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2, lineHeight: 1.6 }}>
             Some settings are also configurable via environment variables in{' '}
-            <Box component="code" sx={{ px: 1, py: 0.5, bgcolor: 'background.default', borderRadius: 1 }}>
+            <Box component="code" sx={{ px: 1, py: 0.5, bgcolor: colors.bgTertiary, borderRadius: 1, fontFamily: 'monospace', fontSize: '0.8125rem' }}>
               .env.local
             </Box>
             :
           </Typography>
-          <Box component="ul" sx={{ ml: 2, color: mcColors.accent }}>
+          <Box component="ul" sx={{ ml: 2, color: 'text.secondary', '& li': { mb: 0.5 }, '& code': { color: colors.accent, fontFamily: 'monospace', fontSize: '0.8125rem' } }}>
             <li><code>MISSION_CONTROL_URL</code> - API URL override</li>
             <li><code>WORKSPACE_BASE_PATH</code> - Base workspace directory</li>
             <li><code>PROJECTS_PATH</code> - Projects directory</li>
             <li><code>OPENCLAW_GATEWAY_URL</code> - Gateway WebSocket URL</li>
             <li><code>OPENCLAW_GATEWAY_TOKEN</code> - Gateway auth token</li>
           </Box>
-          <Typography variant="caption" sx={{ color: mcColors.accent, mt: 2, display: 'block' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 2.5, display: 'block', opacity: 0.9 }}>
             Environment variables take precedence over UI settings for server-side operations.
           </Typography>
         </Paper>

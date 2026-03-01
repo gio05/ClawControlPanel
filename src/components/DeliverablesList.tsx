@@ -8,6 +8,7 @@ import {
   CircularProgress,
   IconButton,
   Link as MuiLink,
+  useTheme,
 } from '@mui/material';
 import {
   Description as FileIcon,
@@ -18,13 +19,15 @@ import {
 } from '@mui/icons-material';
 import { debug } from '@/lib/debug';
 import type { TaskDeliverable } from '@/lib/types';
-import { mcColors } from '@/theme/theme';
+import { getColors } from '@/theme/theme';
 
 interface DeliverablesListProps {
   taskId: string;
 }
 
 export function DeliverablesList({ taskId }: DeliverablesListProps) {
+  const theme = useTheme();
+  const colors = getColors(theme.palette.mode);
   const [deliverables, setDeliverables] = useState<TaskDeliverable[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -179,7 +182,7 @@ export function DeliverablesList({ taskId }: DeliverablesListProps) {
               <Stack direction="row" spacing={0.5}>
                 {deliverable.deliverable_type === 'file' && deliverable.path?.endsWith('.html') && (
                   <IconButton size="small" onClick={() => handlePreview(deliverable)} title="Preview in browser">
-                    <EyeIcon sx={{ fontSize: 16, color: mcColors.accentCyan }} />
+                    <EyeIcon sx={{ fontSize: 16, color: colors.accent }} />
                   </IconButton>
                 )}
                 {deliverable.path && (
@@ -201,8 +204,8 @@ export function DeliverablesList({ taskId }: DeliverablesListProps) {
                 sx={{
                   mt: 1,
                   p: 1,
-                  bgcolor: mcColors.bgTertiary,
-                  borderRadius: 1,
+                  bgcolor: colors.bgSecondary,
+                  borderRadius: 1.5,
                   fontFamily: 'monospace',
                   fontSize: '0.75rem',
                   color: deliverable.deliverable_type === 'url' ? 'primary.main' : 'text.secondary',

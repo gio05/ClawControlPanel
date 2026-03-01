@@ -19,8 +19,8 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const STORAGE_KEY = 'mc-theme-mode';
 
 export function ThemeContextProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>('dark');
-  const [systemPreference, setSystemPreference] = useState<'light' | 'dark'>('dark');
+  const [mode, setModeState] = useState<ThemeMode>('light');
+  const [systemPreference, setSystemPreference] = useState<'light' | 'dark'>('light');
   const [mounted, setMounted] = useState(false);
 
   // Get system preference
@@ -75,7 +75,7 @@ export function ThemeContextProvider({ children }: { children: React.ReactNode }
   // Prevent flash of wrong theme
   if (!mounted) {
     return (
-      <MuiThemeProvider theme={darkTheme}>
+      <MuiThemeProvider theme={lightTheme}>
         {children}
       </MuiThemeProvider>
     );

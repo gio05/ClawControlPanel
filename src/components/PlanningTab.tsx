@@ -16,6 +16,8 @@ import {
   CardContent,
   Chip,
   IconButton,
+  alpha,
+  useTheme,
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -25,7 +27,7 @@ import {
   Close as CloseIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { mcColors } from '@/theme/theme';
+import { getColors } from '@/theme/theme';
 
 interface PlanningOption {
   id: string;
@@ -73,6 +75,8 @@ interface PlanningTabProps {
 }
 
 export function PlanningTab({ taskId, onSpecLocked }: PlanningTabProps) {
+  const theme = useTheme();
+  const colors = getColors(theme.palette.mode);
   const [state, setState] = useState<PlanningState | null>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
@@ -451,10 +455,10 @@ export function PlanningTab({ taskId, onSpecLocked }: PlanningTabProps) {
               sx={{
                 mb: 1,
                 p: 1.5,
-                borderRadius: 1,
-                bgcolor: msg.role === 'user' ? `${mcColors.accent}10` : 'background.default',
+                borderRadius: 2,
+                bgcolor: msg.role === 'user' ? alpha(colors.accent, 0.06) : 'background.default',
                 borderLeft: 2,
-                borderColor: msg.role === 'user' ? 'primary.main' : mcColors.accentPurple,
+                borderColor: msg.role === 'user' ? 'primary.main' : colors.accentPurple,
               }}
             >
               <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
