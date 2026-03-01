@@ -3,7 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
+import {
+  Box,
+  Typography,
+  Button,
+  Stack,
+  CircularProgress,
+} from '@mui/material';
+import { ChevronLeft as ChevronLeftIcon } from '@mui/icons-material';
 import { Header } from '@/components/Header';
 import { AgentsSidebar } from '@/components/AgentsSidebar';
 import { MissionQueue } from '@/components/MissionQueue';
@@ -122,7 +129,7 @@ export default function WorkspacePage() {
       } catch (error) {
         console.error('Failed to poll events:', error);
       }
-    }, 30000); // Increased from 5000 to 30000
+    }, 30000);
 
     // Poll tasks as SSE fallback every 60 seconds (increased from 10s)
     const taskPoll = setInterval(async () => {
@@ -146,7 +153,7 @@ export default function WorkspacePage() {
       } catch (error) {
         console.error('Failed to poll tasks:', error);
       }
-    }, 60000); // Increased from 10000 to 60000
+    }, 60000);
 
     // Check OpenClaw connection every 30 seconds (kept as-is for monitoring)
     const connectionCheck = setInterval(async () => {
@@ -170,41 +177,45 @@ export default function WorkspacePage() {
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-mc-bg flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🔍</div>
-          <h1 className="text-2xl font-bold mb-2">Workspace Not Found</h1>
-          <p className="text-mc-text-secondary mb-6">
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="h1" sx={{ fontSize: '4rem', mb: 2 }}>🔍</Typography>
+          <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>Workspace Not Found</Typography>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>
             The workspace &ldquo;{slug}&rdquo; doesn&apos;t exist.
-          </p>
-          <Link
+          </Typography>
+          <Button
+            component={Link}
             href="/"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-mc-accent text-mc-bg rounded-lg font-medium hover:bg-mc-accent/90"
+            variant="contained"
+            startIcon={<ChevronLeftIcon />}
           >
-            <ChevronLeft className="w-4 h-4" />
             Back to Dashboard
-          </Link>
-        </div>
-      </div>
+          </Button>
+        </Box>
+      </Box>
     );
   }
 
   if (isLoading || !workspace) {
     return (
-      <div className="min-h-screen bg-mc-bg flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4 animate-pulse">🦞</div>
-          <p className="text-mc-text-secondary">Loading {slug}...</p>
-        </div>
-      </div>
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="h1" sx={{ fontSize: '3rem', mb: 2 }}>🦞</Typography>
+          <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+            <CircularProgress size={16} />
+            <Typography color="text.secondary">Loading {slug}...</Typography>
+          </Stack>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-mc-bg overflow-hidden">
+    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default', overflow: 'hidden' }}>
       <Header workspace={workspace} />
 
-      <div className="flex-1 flex overflow-hidden">
+      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Agents Sidebar */}
         <AgentsSidebar workspaceId={workspace.id} />
 
@@ -213,10 +224,10 @@ export default function WorkspacePage() {
 
         {/* Live Feed */}
         <LiveFeed />
-      </div>
+      </Box>
 
       {/* Debug Panel - only shows when debug mode enabled */}
       <SSEDebugPanel />
-    </div>
+    </Box>
   );
 }

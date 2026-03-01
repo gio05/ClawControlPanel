@@ -1,10 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronRight, ChevronLeft, Clock } from 'lucide-react';
+import {
+  Box,
+  Typography,
+  IconButton,
+  Chip,
+  Stack,
+} from '@mui/material';
+import {
+  ChevronRight as ChevronRightIcon,
+  ChevronLeft as ChevronLeftIcon,
+  AccessTime as ClockIcon,
+} from '@mui/icons-material';
 import { useMissionControl } from '@/lib/store';
 import type { Event } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
+import { mcColors } from '@/theme/theme';
 
 type FeedFilter = 'all' | 'tasks' | 'agents';
 
@@ -12,8 +24,6 @@ export function LiveFeed() {
   const { events } = useMissionControl();
   const [filter, setFilter] = useState<FeedFilter>('all');
   const [isMinimized, setIsMinimized] = useState(false);
-
-  const toggleMinimize = () => setIsMinimized(!isMinimized);
 
   const filteredEvents = events.filter((event) => {
     if (filter === 'all') return true;
@@ -49,83 +59,70 @@ export function LiveFeed() {
     }
   };
 
-  const getEventColor = (type: string) => {
-    switch (type) {
-      case 'task_completed':
-        return 'text-mc-accent-green';
-      case 'task_created':
-        return 'text-mc-accent-pink';
-      case 'task_assigned':
-        return 'text-mc-accent-yellow';
-      case 'message_sent':
-        return 'text-mc-accent';
-      case 'agent_joined':
-        return 'text-mc-accent-cyan';
-      default:
-        return 'text-mc-text-secondary';
-    }
-  };
-
   return (
-    <aside
-      className={`bg-mc-bg-secondary border-l border-mc-border flex flex-col transition-all duration-300 ease-in-out ${
-        isMinimized ? 'w-12' : 'w-80'
-      }`}
+    <Box
+      component="aside"
+      sx={{
+        width: isMinimized ? 48 : 320,
+        bgcolor: 'background.paper',
+        borderLeft: 1,
+        borderColor: 'divider',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'width 0.3s ease-in-out',
+      }}
     >
       {/* Header */}
-      <div className="p-3 border-b border-mc-border">
-        <div className="flex items-center">
-          <button
-            onClick={toggleMinimize}
-            className="p-1 rounded hover:bg-mc-bg-tertiary text-mc-text-secondary hover:text-mc-text transition-colors"
-            aria-label={isMinimized ? 'Expand feed' : 'Minimize feed'}
-          >
-            {isMinimized ? (
-              <ChevronLeft className="w-4 h-4" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
-            )}
-          </button>
+      <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <IconButton size="small" onClick={() => setIsMinimized(!isMinimized)}>
+            {isMinimized ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+          </IconButton>
           {!isMinimized && (
-            <span className="text-sm font-medium uppercase tracking-wider">Live Feed</span>
+            <Typography variant="body2" fontWeight="medium" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Live Feed
+            </Typography>
           )}
-        </div>
+        </Stack>
 
-        {/* Filter Tabs */}
         {!isMinimized && (
-          <div className="flex gap-1 mt-3">
+          <Stack direction="row" spacing={0.5} sx={{ mt: 1.5 }}>
             {(['all', 'tasks', 'agents'] as FeedFilter[]).map((tab) => (
-              <button
+              <Chip
                 key={tab}
+                label={tab.toUpperCase()}
+                size="small"
                 onClick={() => setFilter(tab)}
-                className={`px-3 py-1 text-xs rounded uppercase ${
-                  filter === tab
-                    ? 'bg-mc-accent text-mc-bg font-medium'
-                    : 'text-mc-text-secondary hover:bg-mc-bg-tertiary'
-                }`}
-              >
-                {tab}
-              </button>
+                sx={{
+                  bgcolor: filter === tab ? 'primary.main' : 'transparent',
+                  color: filter === tab ? 'primary.contrastText' : 'text.secondary',
+                  '&:hover': { bgcolor: filter === tab ? 'primary.main' : mcColors.bgTertiary },
+                }}
+              />
             ))}
-          </div>
+          </Stack>
         )}
-      </div>
+      </Box>
 
       {/* Events List */}
       {!isMinimized && (
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
           {filteredEvents.length === 0 ? (
-            <div className="text-center py-8 text-mc-text-secondary text-sm">
-              No events yet
-            </div>
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="body2" color="text.secondary">
+                No events yet
+              </Typography>
+            </Box>
           ) : (
-            filteredEvents.map((event) => (
-              <EventItem key={event.id} event={event} />
-            ))
+            <Stack spacing={0.5}>
+              {filteredEvents.map((event) => (
+                <EventItem key={event.id} event={event} />
+              ))}
+            </Stack>
           )}
-        </div>
+        </Box>
       )}
-    </aside>
+    </Box>
   );
 }
 
@@ -157,25 +154,41 @@ function EventItem({ event }: { event: Event }) {
   const isHighlight = event.type === 'task_created' || event.type === 'task_completed';
 
   return (
-    <div
-      className={`p-2 rounded border-l-2 animate-slide-in ${
-        isHighlight
-          ? 'bg-mc-bg-tertiary border-mc-accent-pink'
-          : 'bg-transparent border-transparent hover:bg-mc-bg-tertiary'
-      }`}
+    <Box
+      sx={{
+        p: 1,
+        borderRadius: 1,
+        borderLeft: 2,
+        borderColor: isHighlight ? mcColors.accentPink : 'transparent',
+        bgcolor: isHighlight ? mcColors.bgTertiary : 'transparent',
+        '&:hover': { bgcolor: mcColors.bgTertiary },
+        animation: 'slideIn 0.3s ease-out',
+        '@keyframes slideIn': {
+          from: { opacity: 0, transform: 'translateX(10px)' },
+          to: { opacity: 1, transform: 'translateX(0)' },
+        },
+      }}
     >
-      <div className="flex items-start gap-2">
-        <span className="text-sm">{getEventIcon(event.type)}</span>
-        <div className="flex-1 min-w-0">
-          <p className={`text-sm ${isTaskEvent ? 'text-mc-accent-pink' : 'text-mc-text'}`}>
+      <Stack direction="row" alignItems="flex-start" spacing={1}>
+        <Typography variant="body2">{getEventIcon(event.type)}</Typography>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: isTaskEvent ? mcColors.accentPink : 'text.primary',
+              wordBreak: 'break-word',
+            }}
+          >
             {event.message}
-          </p>
-          <div className="flex items-center gap-1 mt-1 text-xs text-mc-text-secondary">
-            <Clock className="w-3 h-3" />
-            {formatDistanceToNow(new Date(event.created_at), { addSuffix: true })}
-          </div>
-        </div>
-      </div>
-    </div>
+          </Typography>
+          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 0.5 }}>
+            <ClockIcon sx={{ fontSize: 12, color: 'text.secondary' }} />
+            <Typography variant="caption" color="text.secondary">
+              {formatDistanceToNow(new Date(event.created_at), { addSuffix: true })}
+            </Typography>
+          </Stack>
+        </Box>
+      </Stack>
+    </Box>
   );
 }

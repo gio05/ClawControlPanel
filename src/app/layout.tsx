@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import './globals.css';
 import { JetBrains_Mono } from 'next/font/google';
+import ThemeRegistry from '@/theme/ThemeRegistry';
 import DemoBanner from '@/components/DemoBanner';
 
 const jetbrainsMono = JetBrains_Mono({
@@ -24,10 +24,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={jetbrainsMono.variable}>
-      <body className={`${jetbrainsMono.className} bg-mc-bg text-mc-text min-h-screen`}>
-        <DemoBanner />
-        {children}
+    <html lang="en">
+      <body className={jetbrainsMono.className} style={{ minHeight: '100vh' }}>
+        <ThemeRegistry>
+          <DemoBanner />
+          {children}
+        </ThemeRegistry>
       </body>
     </html>
   );

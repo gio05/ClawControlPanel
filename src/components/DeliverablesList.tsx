@@ -1,14 +1,24 @@
-/**
- * DeliverablesList Component
- * Displays deliverables (files, URLs, artifacts) for a task
- */
-
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { FileText, Link as LinkIcon, Package, ExternalLink, Eye } from 'lucide-react';
+import {
+  Box,
+  Typography,
+  Stack,
+  CircularProgress,
+  IconButton,
+  Link as MuiLink,
+} from '@mui/material';
+import {
+  Description as FileIcon,
+  Link as LinkIcon,
+  Inventory as PackageIcon,
+  OpenInNew as ExternalLinkIcon,
+  Visibility as EyeIcon,
+} from '@mui/icons-material';
 import { debug } from '@/lib/debug';
 import type { TaskDeliverable } from '@/lib/types';
+import { mcColors } from '@/theme/theme';
 
 interface DeliverablesListProps {
   taskId: string;
@@ -39,24 +49,22 @@ export function DeliverablesList({ taskId }: DeliverablesListProps) {
   const getDeliverableIcon = (type: string) => {
     switch (type) {
       case 'file':
-        return <FileText className="w-5 h-5" />;
+        return <FileIcon />;
       case 'url':
-        return <LinkIcon className="w-5 h-5" />;
+        return <LinkIcon />;
       case 'artifact':
-        return <Package className="w-5 h-5" />;
+        return <PackageIcon />;
       default:
-        return <FileText className="w-5 h-5" />;
+        return <FileIcon />;
     }
   };
 
   const handleOpen = async (deliverable: TaskDeliverable) => {
-    // URLs open directly in new tab
     if (deliverable.deliverable_type === 'url' && deliverable.path) {
       window.open(deliverable.path, '_blank');
       return;
     }
 
-    // Files - try to open in Finder
     if (deliverable.path) {
       try {
         debug.file('Opening file in Finder', { path: deliverable.path });
@@ -83,7 +91,6 @@ export function DeliverablesList({ taskId }: DeliverablesListProps) {
         }
       } catch (error) {
         console.error('Failed to open file:', error);
-        // Fallback: copy path to clipboard
         try {
           await navigator.clipboard.writeText(deliverable.path);
           alert(`Could not open Finder. Path copied to clipboard:\n${deliverable.path}`);
@@ -113,108 +120,105 @@ export function DeliverablesList({ taskId }: DeliverablesListProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-mc-text-secondary">Loading deliverables...</div>
-      </div>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
+        <CircularProgress size={24} />
+        <Typography color="text.secondary" sx={{ ml: 2 }}>
+          Loading deliverables...
+        </Typography>
+      </Box>
     );
   }
 
   if (deliverables.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-mc-text-secondary">
-        <div className="text-4xl mb-2">📦</div>
-        <p>No deliverables yet</p>
-      </div>
+      <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Typography variant="h3" sx={{ mb: 1 }}>📦</Typography>
+        <Typography color="text.secondary">No deliverables yet</Typography>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <Stack spacing={1.5}>
       {deliverables.map((deliverable) => (
-        <div
+        <Box
           key={deliverable.id}
-          className="flex gap-3 p-3 bg-mc-bg rounded-lg border border-mc-border hover:border-mc-accent transition-colors"
+          sx={{
+            display: 'flex',
+            gap: 1.5,
+            p: 1.5,
+            bgcolor: 'background.default',
+            borderRadius: 1,
+            border: 1,
+            borderColor: 'divider',
+            transition: 'border-color 0.2s',
+            '&:hover': { borderColor: 'primary.main' },
+          }}
         >
-          {/* Icon */}
-          <div className="flex-shrink-0 text-mc-accent">
+          <Box sx={{ color: 'primary.main' }}>
             {getDeliverableIcon(deliverable.deliverable_type)}
-          </div>
+          </Box>
 
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            {/* Title - clickable for URLs */}
-            <div className="flex items-start justify-between gap-2">
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
               {deliverable.deliverable_type === 'url' && deliverable.path ? (
-                <a
+                <MuiLink
                   href={deliverable.path}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-mc-accent hover:text-mc-accent/80 hover:underline flex items-center gap-1.5"
+                  sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontWeight: 'medium' }}
                 >
                   {deliverable.title}
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                  <ExternalLinkIcon sx={{ fontSize: 14 }} />
+                </MuiLink>
               ) : (
-                <h4 className="font-medium text-mc-text">{deliverable.title}</h4>
+                <Typography variant="body2" fontWeight="medium">
+                  {deliverable.title}
+                </Typography>
               )}
-              <div className="flex items-center gap-1">
-                {/* Preview button for HTML files */}
+              <Stack direction="row" spacing={0.5}>
                 {deliverable.deliverable_type === 'file' && deliverable.path?.endsWith('.html') && (
-                  <button
-                    onClick={() => handlePreview(deliverable)}
-                    className="flex-shrink-0 p-1.5 hover:bg-mc-bg-tertiary rounded text-mc-accent-cyan"
-                    title="Preview in browser"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
+                  <IconButton size="small" onClick={() => handlePreview(deliverable)} title="Preview in browser">
+                    <EyeIcon sx={{ fontSize: 16, color: mcColors.accentCyan }} />
+                  </IconButton>
                 )}
-                {/* Open/Reveal button */}
                 {deliverable.path && (
-                  <button
-                    onClick={() => handleOpen(deliverable)}
-                    className="flex-shrink-0 p-1.5 hover:bg-mc-bg-tertiary rounded text-mc-accent"
-                    title={deliverable.deliverable_type === 'url' ? 'Open URL' : 'Reveal in Finder'}
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
+                  <IconButton size="small" onClick={() => handleOpen(deliverable)} title={deliverable.deliverable_type === 'url' ? 'Open URL' : 'Reveal in Finder'}>
+                    <ExternalLinkIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
                 )}
-              </div>
-            </div>
+              </Stack>
+            </Box>
 
-            {/* Description */}
             {deliverable.description && (
-              <p className="text-sm text-mc-text-secondary mt-1">
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                 {deliverable.description}
-              </p>
+              </Typography>
             )}
 
-            {/* Path - clickable for URLs */}
             {deliverable.path && (
-              deliverable.deliverable_type === 'url' ? (
-                <a
-                  href={deliverable.path}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 p-2 bg-mc-bg-tertiary rounded text-xs text-mc-accent hover:text-mc-accent/80 font-mono break-all block hover:bg-mc-bg-tertiary/80"
-                >
-                  {deliverable.path}
-                </a>
-              ) : (
-                <div className="mt-2 p-2 bg-mc-bg-tertiary rounded text-xs text-mc-text-secondary font-mono break-all">
-                  {deliverable.path}
-                </div>
-              )
+              <Box
+                sx={{
+                  mt: 1,
+                  p: 1,
+                  bgcolor: mcColors.bgTertiary,
+                  borderRadius: 1,
+                  fontFamily: 'monospace',
+                  fontSize: '0.75rem',
+                  color: deliverable.deliverable_type === 'url' ? 'primary.main' : 'text.secondary',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {deliverable.path}
+              </Box>
             )}
 
-            {/* Metadata */}
-            <div className="flex items-center gap-4 mt-2 text-xs text-mc-text-secondary">
-              <span className="capitalize">{deliverable.deliverable_type}</span>
-              <span>•</span>
-              <span>{formatTimestamp(deliverable.created_at)}</span>
-            </div>
-          </div>
-        </div>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              {formatTimestamp(deliverable.created_at)}
+            </Typography>
+          </Box>
+        </Box>
       ))}
-    </div>
+    </Stack>
   );
 }

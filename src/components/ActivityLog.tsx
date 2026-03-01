@@ -1,13 +1,10 @@
-/**
- * ActivityLog Component
- * Displays chronological activity log for a task
- */
-
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { Box, Typography, Stack, CircularProgress } from '@mui/material';
 import { formatDistanceToNow } from 'date-fns';
 import type { TaskActivity } from '@/lib/types';
+import { mcColors } from '@/theme/theme';
 
 interface ActivityLogProps {
   taskId: string;
@@ -37,18 +34,15 @@ export function ActivityLog({ taskId }: ActivityLogProps) {
     }
   }, [taskId]);
 
-  // Initial load
   useEffect(() => {
     loadActivities(true);
   }, [taskId, loadActivities]);
 
-  // Polling function
   const pollForActivities = useCallback(async () => {
     try {
       const res = await fetch(`/api/tasks/${taskId}/activities`);
       if (res.ok) {
         const data = await res.json();
-        // Only update if there are new activities
         if (data.length !== lastCountRef.current) {
           setActivities(data);
           lastCountRef.current = data.length;
@@ -57,12 +51,10 @@ export function ActivityLog({ taskId }: ActivityLogProps) {
     } catch (error) {
       console.error('Polling error:', error);
     }
-  }, [taskId]); // setActivities is stable from React, no need to include
+  }, [taskId]);
 
-  // Poll for new activities every 5 seconds when task is in progress
   useEffect(() => {
     const pollInterval = setInterval(pollForActivities, 5000);
-
     pollingRef.current = pollInterval;
 
     return () => {
@@ -91,66 +83,80 @@ export function ActivityLog({ taskId }: ActivityLogProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-mc-text-secondary">Loading activities...</div>
-      </div>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
+        <CircularProgress size={24} />
+        <Typography color="text.secondary" sx={{ ml: 2 }}>
+          Loading activities...
+        </Typography>
+      </Box>
     );
   }
 
   if (activities.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-mc-text-secondary">
-        <div className="text-4xl mb-2">📝</div>
-        <p>No activity yet</p>
-      </div>
+      <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Typography variant="h3" sx={{ mb: 1 }}>📝</Typography>
+        <Typography color="text.secondary">No activity yet</Typography>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <Stack spacing={1.5}>
       {activities.map((activity) => (
-        <div
+        <Box
           key={activity.id}
-          className="flex gap-3 p-3 bg-mc-bg rounded-lg border border-mc-border"
+          sx={{
+            display: 'flex',
+            gap: 1.5,
+            p: 1.5,
+            bgcolor: 'background.default',
+            borderRadius: 1,
+            border: 1,
+            borderColor: 'divider',
+          }}
         >
-          {/* Icon */}
-          <div className="text-2xl flex-shrink-0">
-            {getActivityIcon(activity.activity_type)}
-          </div>
+          <Typography variant="h5">{getActivityIcon(activity.activity_type)}</Typography>
 
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            {/* Agent info */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
             {activity.agent && (
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm">{activity.agent.avatar_emoji}</span>
-                <span className="text-sm font-medium text-mc-text">
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                <Typography variant="body2">{activity.agent.avatar_emoji}</Typography>
+                <Typography variant="body2" fontWeight="medium">
                   {activity.agent.name}
-                </span>
-              </div>
+                </Typography>
+              </Stack>
             )}
 
-            {/* Message */}
-            <p className="text-sm text-mc-text break-words">
+            <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
               {activity.message}
-            </p>
+            </Typography>
 
-            {/* Metadata */}
             {activity.metadata && (
-              <div className="mt-2 p-2 bg-mc-bg-tertiary rounded text-xs text-mc-text-secondary font-mono">
-                {typeof activity.metadata === 'string' 
-                  ? activity.metadata 
+              <Box
+                sx={{
+                  mt: 1,
+                  p: 1,
+                  bgcolor: mcColors.bgTertiary,
+                  borderRadius: 1,
+                  fontFamily: 'monospace',
+                  fontSize: '0.75rem',
+                  color: 'text.secondary',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {typeof activity.metadata === 'string'
+                  ? activity.metadata
                   : JSON.stringify(JSON.parse(activity.metadata), null, 2)}
-              </div>
+              </Box>
             )}
 
-            {/* Timestamp */}
-            <div className="text-xs text-mc-text-secondary mt-2">
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
               {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
-            </div>
-          </div>
-        </div>
+            </Typography>
+          </Box>
+        </Box>
       ))}
-    </div>
+    </Stack>
   );
 }

@@ -3,10 +3,25 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Zap, Settings, ChevronLeft, LayoutGrid } from 'lucide-react';
+import {
+  AppBar,
+  Toolbar,
+  Box,
+  Typography,
+  IconButton,
+  Chip,
+  Stack,
+} from '@mui/material';
+import {
+  FlashOn as ZapIcon,
+  Settings as SettingsIcon,
+  ChevronLeft as ChevronLeftIcon,
+  GridView as LayoutGridIcon,
+} from '@mui/icons-material';
 import { useMissionControl } from '@/lib/store';
 import { format } from 'date-fns';
 import type { Workspace } from '@/lib/types';
+import { mcColors } from '@/theme/theme';
 
 interface HeaderProps {
   workspace?: Workspace;
@@ -23,7 +38,6 @@ export function Header({ workspace }: HeaderProps) {
     return () => clearInterval(timer);
   }, []);
 
-  // Load active sub-agent count
   useEffect(() => {
     const loadSubAgentCount = async () => {
       try {
@@ -38,8 +52,6 @@ export function Header({ workspace }: HeaderProps) {
     };
 
     loadSubAgentCount();
-
-    // Poll every 30 seconds (reduced from 10s to reduce load)
     const interval = setInterval(loadSubAgentCount, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -49,84 +61,123 @@ export function Header({ workspace }: HeaderProps) {
   const tasksInQueue = tasks.filter((t) => t.status !== 'done' && t.status !== 'review').length;
 
   return (
-    <header className="h-14 bg-mc-bg-secondary border-b border-mc-border flex items-center justify-between px-4">
-      {/* Left: Logo & Title */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Zap className="w-5 h-5 text-mc-accent-cyan" />
-          <span className="font-semibold text-mc-text uppercase tracking-wider text-sm">
-            Mission Control
-          </span>
-        </div>
-
-        {/* Workspace indicator or back to dashboard */}
-        {workspace ? (
-          <div className="flex items-center gap-2">
-            <Link
-              href="/"
-              className="flex items-center gap-1 text-mc-text-secondary hover:text-mc-accent transition-colors"
+    <AppBar
+      position="static"
+      sx={{
+        bgcolor: 'background.paper',
+        borderBottom: 1,
+        borderColor: 'divider',
+        boxShadow: 'none',
+      }}
+    >
+      <Toolbar sx={{ height: 56, minHeight: 56 }}>
+        {/* Left: Logo & Title */}
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <ZapIcon sx={{ color: mcColors.accentCyan }} />
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+              }}
             >
-              <ChevronLeft className="w-4 h-4" />
-              <LayoutGrid className="w-4 h-4" />
+              Mission Control
+            </Typography>
+          </Stack>
+
+          {workspace ? (
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+                <IconButton size="small" sx={{ color: 'text.secondary' }}>
+                  <ChevronLeftIcon fontSize="small" />
+                  <LayoutGridIcon fontSize="small" />
+                </IconButton>
+              </Link>
+              <Typography color="text.secondary">/</Typography>
+              <Chip
+                icon={<Typography>{workspace.icon}</Typography>}
+                label={workspace.name}
+                sx={{
+                  bgcolor: mcColors.bgTertiary,
+                  '& .MuiChip-icon': { ml: 1 },
+                }}
+              />
+            </Stack>
+          ) : (
+            <Link href="/" style={{ textDecoration: 'none' }}>
+              <Chip
+                icon={<LayoutGridIcon sx={{ fontSize: 16 }} />}
+                label="All Workspaces"
+                sx={{
+                  bgcolor: mcColors.bgTertiary,
+                  '&:hover': { bgcolor: 'background.default' },
+                }}
+              />
             </Link>
-            <span className="text-mc-text-secondary">/</span>
-            <div className="flex items-center gap-2 px-3 py-1 bg-mc-bg-tertiary rounded">
-              <span className="text-lg">{workspace.icon}</span>
-              <span className="font-medium">{workspace.name}</span>
-            </div>
-          </div>
-        ) : (
-          <Link
-            href="/"
-            className="flex items-center gap-2 px-3 py-1 bg-mc-bg-tertiary rounded hover:bg-mc-bg transition-colors"
-          >
-            <LayoutGrid className="w-4 h-4" />
-            <span className="text-sm">All Workspaces</span>
-          </Link>
+          )}
+        </Stack>
+
+        <Box sx={{ flex: 1 }} />
+
+        {/* Center: Stats */}
+        {workspace && (
+          <Stack direction="row" spacing={4} sx={{ mx: 4 }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h5" fontWeight="bold" sx={{ color: mcColors.accentCyan }}>
+                {activeAgents}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase' }}>
+                Agents Active
+              </Typography>
+            </Box>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h5" fontWeight="bold" sx={{ color: mcColors.accentPurple }}>
+                {tasksInQueue}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase' }}>
+                Tasks in Queue
+              </Typography>
+            </Box>
+          </Stack>
         )}
-      </div>
 
-      {/* Center: Stats - only show in workspace view */}
-      {workspace && (
-        <div className="flex items-center gap-8">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-mc-accent-cyan">{activeAgents}</div>
-            <div className="text-xs text-mc-text-secondary uppercase">Agents Active</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-mc-accent-purple">{tasksInQueue}</div>
-            <div className="text-xs text-mc-text-secondary uppercase">Tasks in Queue</div>
-          </div>
-        </div>
-      )}
-
-      {/* Right: Time & Status */}
-      <div className="flex items-center gap-4">
-        <span className="text-mc-text-secondary text-sm font-mono">
-          {format(currentTime, 'HH:mm:ss')}
-        </span>
-        <div
-          className={`flex items-center gap-2 px-3 py-1 rounded border text-sm font-medium ${
-            isOnline
-              ? 'bg-mc-accent-green/20 border-mc-accent-green text-mc-accent-green'
-              : 'bg-mc-accent-red/20 border-mc-accent-red text-mc-accent-red'
-          }`}
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isOnline ? 'bg-mc-accent-green animate-pulse' : 'bg-mc-accent-red'
-            }`}
+        {/* Right: Time & Status */}
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+            {format(currentTime, 'HH:mm:ss')}
+          </Typography>
+          <Chip
+            size="small"
+            label={
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    bgcolor: isOnline ? 'success.main' : 'error.main',
+                    animation: isOnline ? 'pulse 2s infinite' : 'none',
+                  }}
+                />
+                <Typography variant="caption" fontWeight="medium">
+                  {isOnline ? 'ONLINE' : 'OFFLINE'}
+                </Typography>
+              </Stack>
+            }
+            sx={{
+              bgcolor: isOnline ? `${mcColors.accentGreen}20` : `${mcColors.accentRed}20`,
+              borderColor: isOnline ? mcColors.accentGreen : mcColors.accentRed,
+              color: isOnline ? mcColors.accentGreen : mcColors.accentRed,
+              border: 1,
+            }}
           />
-          {isOnline ? 'ONLINE' : 'OFFLINE'}
-        </div>
-        <button
-          onClick={() => router.push('/settings')}
-          className="p-2 hover:bg-mc-bg-tertiary rounded text-mc-text-secondary"
-          title="Settings"
-        >
-          <Settings className="w-5 h-5" />
-        </button>
-      </div>
-    </header>
+          <IconButton onClick={() => router.push('/settings')} sx={{ color: 'text.secondary' }}>
+            <SettingsIcon />
+          </IconButton>
+        </Stack>
+      </Toolbar>
+    </AppBar>
   );
 }

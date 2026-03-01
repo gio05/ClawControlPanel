@@ -1,11 +1,30 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, ChevronRight, ChevronLeft, Zap, ZapOff, Loader2, Search } from 'lucide-react';
+import {
+  Box,
+  Typography,
+  IconButton,
+  Button,
+  Chip,
+  Stack,
+  Tooltip,
+  CircularProgress,
+  Alert,
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  ChevronRight as ChevronRightIcon,
+  ChevronLeft as ChevronLeftIcon,
+  FlashOn as ZapIcon,
+  FlashOff as ZapOffIcon,
+  Search as SearchIcon,
+} from '@mui/icons-material';
 import { useMissionControl } from '@/lib/store';
 import type { Agent, AgentStatus, OpenClawSession } from '@/lib/types';
 import { AgentModal } from './AgentModal';
 import { DiscoverAgentsModal } from './DiscoverAgentsModal';
+import { mcColors } from '@/theme/theme';
 
 type FilterTab = 'all' | 'working' | 'standby';
 
@@ -23,9 +42,6 @@ export function AgentsSidebar({ workspaceId }: AgentsSidebarProps) {
   const [activeSubAgents, setActiveSubAgents] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
 
-  const toggleMinimize = () => setIsMinimized(!isMinimized);
-
-  // Load OpenClaw session status for all agents on mount
   const loadOpenClawSessions = useCallback(async () => {
     for (const agent of agents) {
       try {
@@ -48,7 +64,6 @@ export function AgentsSidebar({ workspaceId }: AgentsSidebarProps) {
     }
   }, [loadOpenClawSessions, agents.length]);
 
-  // Load active sub-agent count
   useEffect(() => {
     const loadSubAgentCount = async () => {
       try {
@@ -63,27 +78,23 @@ export function AgentsSidebar({ workspaceId }: AgentsSidebarProps) {
     };
 
     loadSubAgentCount();
-
-    // Poll every 30 seconds (reduced from 10s to reduce load)
     const interval = setInterval(loadSubAgentCount, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const handleConnectToOpenClaw = async (agent: Agent, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent selecting the agent
+    e.stopPropagation();
     setConnectingAgentId(agent.id);
 
     try {
       const existingSession = agentOpenClawSessions[agent.id];
 
       if (existingSession) {
-        // Disconnect
         const res = await fetch(`/api/agents/${agent.id}/openclaw`, { method: 'DELETE' });
         if (res.ok) {
           setAgentOpenClawSession(agent.id, null);
         }
       } else {
-        // Connect
         const res = await fetch(`/api/agents/${agent.id}/openclaw`, { method: 'POST' });
         if (res.ok) {
           const data = await res.json();
@@ -106,225 +117,301 @@ export function AgentsSidebar({ workspaceId }: AgentsSidebarProps) {
     return agent.status === filter;
   });
 
-  const getStatusBadge = (status: AgentStatus) => {
-    const styles = {
-      standby: 'status-standby',
-      working: 'status-working',
-      offline: 'status-offline',
-    };
-    return styles[status] || styles.standby;
+  const getStatusColor = (status: AgentStatus) => {
+    switch (status) {
+      case 'working':
+        return mcColors.accentGreen;
+      case 'standby':
+        return mcColors.textSecondary;
+      default:
+        return mcColors.accentRed;
+    }
   };
 
   return (
-    <aside
-      className={`bg-mc-bg-secondary border-r border-mc-border flex flex-col transition-all duration-300 ease-in-out ${
-        isMinimized ? 'w-12' : 'w-64'
-      }`}
+    <Box
+      component="aside"
+      sx={{
+        width: isMinimized ? 48 : 256,
+        bgcolor: 'background.paper',
+        borderRight: 1,
+        borderColor: 'divider',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'width 0.3s ease-in-out',
+      }}
     >
       {/* Header */}
-      <div className="p-3 border-b border-mc-border">
-        <div className="flex items-center">
-          <button
-            onClick={toggleMinimize}
-            className="p-1 rounded hover:bg-mc-bg-tertiary text-mc-text-secondary hover:text-mc-text transition-colors"
-            aria-label={isMinimized ? 'Expand agents' : 'Minimize agents'}
-          >
-            {isMinimized ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" />
-            )}
-          </button>
+      <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <IconButton size="small" onClick={() => setIsMinimized(!isMinimized)}>
+            {isMinimized ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+          </IconButton>
           {!isMinimized && (
             <>
-              <span className="text-sm font-medium uppercase tracking-wider">Agents</span>
-              <span className="bg-mc-bg-tertiary text-mc-text-secondary text-xs px-2 py-0.5 rounded ml-2">
-                {agents.length}
-              </span>
+              <Typography variant="body2" fontWeight="medium" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Agents
+              </Typography>
+              <Chip label={agents.length} size="small" sx={{ bgcolor: mcColors.bgTertiary, height: 20 }} />
             </>
           )}
-        </div>
+        </Stack>
 
         {!isMinimized && (
           <>
-            {/* Active Sub-Agents Counter */}
             {activeSubAgents > 0 && (
-              <div className="mb-3 mt-3 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-green-400">●</span>
-                  <span className="text-mc-text">Active Sub-Agents:</span>
-                  <span className="font-bold text-green-400">{activeSubAgents}</span>
-                </div>
-              </div>
+              <Alert
+                severity="success"
+                sx={{
+                  mt: 1.5,
+                  py: 0.5,
+                  bgcolor: `${mcColors.accentGreen}10`,
+                  border: 1,
+                  borderColor: `${mcColors.accentGreen}20`,
+                }}
+              >
+                <Typography variant="body2">
+                  Active Sub-Agents: <strong>{activeSubAgents}</strong>
+                </Typography>
+              </Alert>
             )}
 
-            {/* Filter Tabs */}
-            <div className="flex gap-1">
+            <Stack direction="row" spacing={0.5} sx={{ mt: 1.5 }}>
               {(['all', 'working', 'standby'] as FilterTab[]).map((tab) => (
-                <button
+                <Chip
                   key={tab}
+                  label={tab.toUpperCase()}
+                  size="small"
                   onClick={() => setFilter(tab)}
-                  className={`px-3 py-1 text-xs rounded uppercase ${
-                    filter === tab
-                      ? 'bg-mc-accent text-mc-bg font-medium'
-                      : 'text-mc-text-secondary hover:bg-mc-bg-tertiary'
-                  }`}
-                >
-                  {tab}
-                </button>
+                  sx={{
+                    bgcolor: filter === tab ? 'primary.main' : 'transparent',
+                    color: filter === tab ? 'primary.contrastText' : 'text.secondary',
+                    '&:hover': { bgcolor: filter === tab ? 'primary.main' : mcColors.bgTertiary },
+                  }}
+                />
               ))}
-            </div>
+            </Stack>
           </>
         )}
-      </div>
+      </Box>
 
       {/* Agent List */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+      <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
         {filteredAgents.map((agent) => {
           const openclawSession = agentOpenClawSessions[agent.id];
+          const isConnecting = connectingAgentId === agent.id;
 
           if (isMinimized) {
-            // Minimized view - just avatar
             return (
-              <div key={agent.id} className="flex justify-center py-3">
-                <button
-                  onClick={() => {
-                    setSelectedAgent(agent);
-                    setEditingAgent(agent);
-                  }}
-                  className="relative group"
-                  title={`${agent.name} - ${agent.role}`}
-                >
-                  <span className="text-2xl">{agent.avatar_emoji}</span>
-                  {openclawSession && (
-                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-mc-bg-secondary" />
-                  )}
-                  {!!agent.is_master && (
-                    <span className="absolute -top-1 -right-1 text-xs text-mc-accent-yellow">★</span>
-                  )}
-                  {/* Status indicator */}
-                  <span
-                    className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${
-                      agent.status === 'working' ? 'bg-mc-accent-green' :
-                      agent.status === 'standby' ? 'bg-mc-text-secondary' :
-                      'bg-gray-500'
-                    }`}
-                  />
-                  {/* Tooltip */}
-                  <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-mc-bg text-mc-text text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 border border-mc-border">
-                    {agent.name}
-                  </div>
-                </button>
-              </div>
+              <Box key={agent.id} sx={{ display: 'flex', justifyContent: 'center', py: 1.5 }}>
+                <Tooltip title={`${agent.name} - ${agent.role}`} placement="right">
+                  <Box
+                    onClick={() => {
+                      setSelectedAgent(agent);
+                      setEditingAgent(agent);
+                    }}
+                    sx={{ position: 'relative', cursor: 'pointer' }}
+                  >
+                    <Typography variant="h5">{agent.avatar_emoji}</Typography>
+                    {openclawSession && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          bottom: -2,
+                          right: -2,
+                          width: 10,
+                          height: 10,
+                          bgcolor: mcColors.accentGreen,
+                          borderRadius: '50%',
+                          border: 2,
+                          borderColor: 'background.paper',
+                        }}
+                      />
+                    )}
+                    {!!agent.is_master && (
+                      <Typography
+                        sx={{
+                          position: 'absolute',
+                          top: -4,
+                          right: -4,
+                          fontSize: 10,
+                          color: mcColors.accentYellow,
+                        }}
+                      >
+                        ★
+                      </Typography>
+                    )}
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        bottom: -4,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        bgcolor: getStatusColor(agent.status),
+                      }}
+                    />
+                  </Box>
+                </Tooltip>
+              </Box>
             );
           }
 
-          // Expanded view - full agent card
-          const isConnecting = connectingAgentId === agent.id;
           return (
-            <div
+            <Box
               key={agent.id}
-              className={`w-full rounded hover:bg-mc-bg-tertiary transition-colors ${
-                selectedAgent?.id === agent.id ? 'bg-mc-bg-tertiary' : ''
-              }`}
+              sx={{
+                borderRadius: 1,
+                mb: 0.5,
+                bgcolor: selectedAgent?.id === agent.id ? mcColors.bgTertiary : 'transparent',
+                '&:hover': { bgcolor: mcColors.bgTertiary },
+              }}
             >
-              <button
+              <Box
                 onClick={() => {
                   setSelectedAgent(agent);
                   setEditingAgent(agent);
                 }}
-                className="w-full flex items-center gap-3 p-2 text-left"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  p: 1,
+                  cursor: 'pointer',
+                }}
               >
-                {/* Avatar */}
-                <div className="text-2xl relative">
+                <Box sx={{ position: 'relative', fontSize: '1.5rem' }}>
                   {agent.avatar_emoji}
                   {openclawSession && (
-                    <span className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-mc-bg-secondary" />
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        bottom: -4,
+                        right: -4,
+                        width: 12,
+                        height: 12,
+                        bgcolor: mcColors.accentGreen,
+                        borderRadius: '50%',
+                        border: 2,
+                        borderColor: 'background.paper',
+                      }}
+                    />
                   )}
-                </div>
+                </Box>
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm truncate">{agent.name}</span>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <Typography variant="body2" fontWeight="medium" noWrap>
+                      {agent.name}
+                    </Typography>
                     {!!agent.is_master && (
-                      <span className="text-xs text-mc-accent-yellow">★</span>
+                      <Typography sx={{ fontSize: 10, color: mcColors.accentYellow }}>★</Typography>
                     )}
-                  </div>
-                  <div className="text-xs text-mc-text-secondary truncate flex items-center gap-1">
-                    {agent.role}
+                  </Stack>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <Typography variant="caption" color="text.secondary" noWrap>
+                      {agent.role}
+                    </Typography>
                     {agent.source === 'gateway' && (
-                      <span className="text-[10px] px-1 py-0 bg-blue-500/20 text-blue-400 rounded" title="Imported from Gateway">
-                        GW
-                      </span>
+                      <Chip
+                        label="GW"
+                        size="small"
+                        sx={{
+                          height: 16,
+                          fontSize: 9,
+                          bgcolor: `${mcColors.accent}20`,
+                          color: mcColors.accent,
+                        }}
+                      />
                     )}
-                  </div>
-                </div>
+                  </Stack>
+                </Box>
 
-                {/* Status */}
-                <span
-                  className={`text-xs px-2 py-0.5 rounded uppercase ${getStatusBadge(
-                    agent.status
-                  )}`}
-                >
-                  {agent.status}
-                </span>
-              </button>
+                <Chip
+                  label={agent.status.toUpperCase()}
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: 10,
+                    bgcolor: `${getStatusColor(agent.status)}20`,
+                    color: getStatusColor(agent.status),
+                    border: 1,
+                    borderColor: `${getStatusColor(agent.status)}50`,
+                  }}
+                />
+              </Box>
 
-              {/* OpenClaw Connect Button - show for master agents */}
               {!!agent.is_master && (
-                <div className="px-2 pb-2">
-                  <button
+                <Box sx={{ px: 1, pb: 1 }}>
+                  <Button
+                    fullWidth
+                    size="small"
                     onClick={(e) => handleConnectToOpenClaw(agent, e)}
                     disabled={isConnecting}
-                    className={`w-full flex items-center justify-center gap-2 px-2 py-1 rounded text-xs transition-colors ${
-                      openclawSession
-                        ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                        : 'bg-mc-bg text-mc-text-secondary hover:bg-mc-bg-tertiary hover:text-mc-text'
-                    }`}
+                    startIcon={
+                      isConnecting ? (
+                        <CircularProgress size={12} />
+                      ) : openclawSession ? (
+                        <ZapIcon sx={{ fontSize: 14 }} />
+                      ) : (
+                        <ZapOffIcon sx={{ fontSize: 14 }} />
+                      )
+                    }
+                    sx={{
+                      bgcolor: openclawSession ? `${mcColors.accentGreen}20` : mcColors.bg,
+                      color: openclawSession ? mcColors.accentGreen : 'text.secondary',
+                      '&:hover': {
+                        bgcolor: openclawSession ? `${mcColors.accentGreen}30` : mcColors.bgTertiary,
+                      },
+                    }}
                   >
-                    {isConnecting ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        <span>Connecting...</span>
-                      </>
-                    ) : openclawSession ? (
-                      <>
-                        <Zap className="w-3 h-3" />
-                        <span>OpenClaw Connected</span>
-                      </>
-                    ) : (
-                      <>
-                        <ZapOff className="w-3 h-3" />
-                        <span>Connect to OpenClaw</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                    {isConnecting
+                      ? 'Connecting...'
+                      : openclawSession
+                      ? 'OpenClaw Connected'
+                      : 'Connect to OpenClaw'}
+                  </Button>
+                </Box>
               )}
-            </div>
+            </Box>
           );
         })}
-      </div>
+      </Box>
 
-      {/* Add Agent / Discover Buttons */}
+      {/* Add Agent Buttons */}
       {!isMinimized && (
-        <div className="p-3 border-t border-mc-border space-y-2">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-mc-bg-tertiary hover:bg-mc-border rounded text-sm text-mc-text-secondary hover:text-mc-text transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Agent
-          </button>
-          <button
-            onClick={() => setShowDiscoverModal(true)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded text-sm text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            <Search className="w-4 h-4" />
-            Import from Gateway
-          </button>
-        </div>
+        <Box sx={{ p: 1.5, borderTop: 1, borderColor: 'divider' }}>
+          <Stack spacing={1}>
+            <Button
+              fullWidth
+              startIcon={<AddIcon />}
+              onClick={() => setShowCreateModal(true)}
+              sx={{
+                bgcolor: mcColors.bgTertiary,
+                color: 'text.secondary',
+                '&:hover': { bgcolor: 'divider', color: 'text.primary' },
+              }}
+            >
+              Add Agent
+            </Button>
+            <Button
+              fullWidth
+              startIcon={<SearchIcon />}
+              onClick={() => setShowDiscoverModal(true)}
+              sx={{
+                bgcolor: `${mcColors.accent}10`,
+                color: mcColors.accent,
+                border: 1,
+                borderColor: `${mcColors.accent}20`,
+                '&:hover': { bgcolor: `${mcColors.accent}20` },
+              }}
+            >
+              Import from Gateway
+            </Button>
+          </Stack>
+        </Box>
       )}
 
       {/* Modals */}
@@ -344,6 +431,6 @@ export function AgentsSidebar({ workspaceId }: AgentsSidebarProps) {
           workspaceId={workspaceId}
         />
       )}
-    </aside>
+    </Box>
   );
 }

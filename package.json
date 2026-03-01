@@ -13,12 +13,17 @@
     "db:reset": "rm -f mission-control.db mission-control.db-* && npm run db:seed"
   },
   "dependencies": {
+    "@emotion/cache": "^11.14.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@hello-pangea/dnd": "^17.0.0",
+    "@mui/icons-material": "^7.3.8",
+    "@mui/material": "^7.3.8",
+    "@mui/material-nextjs": "^7.3.8",
     "better-sqlite3": "^12.6.2",
     "clsx": "^2.1.1",
     "css-tree": "^3.1.0",
     "date-fns": "^4.1.0",
-    "lucide-react": "^0.468.0",
     "next": "14.2.21",
     "playwright": "^1.58.1",
     "react": "^18.2.0",
@@ -35,11 +40,8 @@
     "@types/react": "^18.2.79",
     "@types/react-dom": "^18.2.25",
     "@types/uuid": "^10.0.0",
-    "autoprefixer": "^10.4.20",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.21",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

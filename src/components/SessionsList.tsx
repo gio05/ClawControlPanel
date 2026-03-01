@@ -1,12 +1,23 @@
-/**
- * SessionsList Component
- * Displays OpenClaw sub-agent sessions for a task
- */
-
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Bot, CheckCircle, Circle, XCircle, Trash2, Check } from 'lucide-react';
+import {
+  Box,
+  Typography,
+  Stack,
+  CircularProgress,
+  IconButton,
+  Chip,
+} from '@mui/material';
+import {
+  SmartToy as BotIcon,
+  CheckCircle as CheckCircleIcon,
+  RadioButtonUnchecked as CircleIcon,
+  Cancel as XCircleIcon,
+  Delete as DeleteIcon,
+  Check as CheckIcon,
+} from '@mui/icons-material';
+import { mcColors } from '@/theme/theme';
 
 interface SessionWithAgent {
   id: string;
@@ -52,13 +63,13 @@ export function SessionsList({ taskId }: SessionsListProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'active':
-        return <Circle className="w-4 h-4 text-green-500 fill-current animate-pulse" />;
+        return <CircleIcon sx={{ color: mcColors.accentGreen, animation: 'pulse 2s infinite' }} />;
       case 'completed':
-        return <CheckCircle className="w-4 h-4 text-mc-accent" />;
+        return <CheckCircleIcon sx={{ color: mcColors.accent }} />;
       case 'failed':
-        return <XCircle className="w-4 h-4 text-red-500" />;
+        return <XCircleIcon sx={{ color: mcColors.accentRed }} />;
       default:
-        return <Circle className="w-4 h-4 text-mc-text-secondary" />;
+        return <CircleIcon color="action" />;
     }
   };
 
@@ -124,93 +135,107 @@ export function SessionsList({ taskId }: SessionsListProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-mc-text-secondary">Loading sessions...</div>
-      </div>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
+        <CircularProgress size={24} />
+        <Typography color="text.secondary" sx={{ ml: 2 }}>
+          Loading sessions...
+        </Typography>
+      </Box>
     );
   }
 
   if (sessions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-mc-text-secondary">
-        <div className="text-4xl mb-2">🤖</div>
-        <p>No sub-agent sessions yet</p>
-      </div>
+      <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Typography variant="h3" sx={{ mb: 1 }}>🤖</Typography>
+        <Typography color="text.secondary">No sub-agent sessions yet</Typography>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <Stack spacing={1.5}>
       {sessions.map((session) => (
-        <div
+        <Box
           key={session.id}
-          className="flex gap-3 p-3 bg-mc-bg rounded-lg border border-mc-border"
+          sx={{
+            display: 'flex',
+            gap: 1.5,
+            p: 1.5,
+            bgcolor: 'background.default',
+            borderRadius: 1,
+            border: 1,
+            borderColor: 'divider',
+          }}
         >
-          {/* Agent Avatar */}
-          <div className="flex-shrink-0">
+          <Box>
             {session.agent_avatar_emoji ? (
-              <span className="text-2xl">{session.agent_avatar_emoji}</span>
+              <Typography variant="h4">{session.agent_avatar_emoji}</Typography>
             ) : (
-              <Bot className="w-8 h-8 text-mc-accent" />
+              <BotIcon sx={{ fontSize: 32, color: 'primary.main' }} />
             )}
-          </div>
+          </Box>
 
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            {/* Agent name and status */}
-            <div className="flex items-center gap-2 mb-1">
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
               {getStatusIcon(session.status)}
-              <span className="font-medium text-mc-text">
+              <Typography variant="body2" fontWeight="medium">
                 {session.agent_name || 'Sub-Agent'}
-              </span>
-              <span className="text-xs text-mc-text-secondary capitalize">
-                {session.status}
-              </span>
-            </div>
+              </Typography>
+              <Chip
+                label={session.status}
+                size="small"
+                sx={{
+                  height: 18,
+                  fontSize: 10,
+                  textTransform: 'capitalize',
+                }}
+              />
+            </Stack>
 
-            {/* Session ID */}
-            <div className="text-xs text-mc-text-secondary font-mono mb-2 truncate">
+            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', display: 'block', mb: 1 }}>
               Session: {session.openclaw_session_id}
-            </div>
+            </Typography>
 
-            {/* Duration and timestamps */}
-            <div className="flex items-center gap-3 text-xs text-mc-text-secondary">
-              <span>
+            <Stack direction="row" spacing={1.5}>
+              <Typography variant="caption" color="text.secondary">
                 Duration: {formatDuration(session.created_at, session.ended_at)}
-              </span>
-              <span>•</span>
-              <span>Started {formatTimestamp(session.created_at)}</span>
-            </div>
+              </Typography>
+              <Typography variant="caption" color="text.secondary">•</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Started {formatTimestamp(session.created_at)}
+              </Typography>
+            </Stack>
 
-            {/* Channel */}
             {session.channel && (
-              <div className="mt-2 text-xs text-mc-text-secondary">
-                Channel: <span className="font-mono">{session.channel}</span>
-              </div>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                Channel: <span style={{ fontFamily: 'monospace' }}>{session.channel}</span>
+              </Typography>
             )}
-          </div>
+          </Box>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col gap-1">
+          <Stack spacing={0.5}>
             {session.status === 'active' && (
-              <button
+              <IconButton
+                size="small"
                 onClick={() => handleMarkComplete(session.openclaw_session_id)}
-                className="p-1.5 hover:bg-mc-bg-tertiary rounded text-green-500"
                 title="Mark as complete"
+                sx={{ color: mcColors.accentGreen }}
               >
-                <Check className="w-4 h-4" />
-              </button>
+                <CheckIcon sx={{ fontSize: 16 }} />
+              </IconButton>
             )}
-            <button
+            <IconButton
+              size="small"
               onClick={() => handleDelete(session.openclaw_session_id)}
-              className="p-1.5 hover:bg-mc-bg-tertiary rounded text-red-500"
               title="Delete session"
+              sx={{ color: 'text.secondary', '&:hover': { color: mcColors.accentRed } }}
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+              <DeleteIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Stack>
+        </Box>
       ))}
-    </div>
+    </Stack>
   );
 }

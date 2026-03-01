@@ -1,25 +1,40 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, ChevronRight, GripVertical } from 'lucide-react';
+import {
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  IconButton,
+  Chip,
+  Stack,
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  ChevronRight as ChevronRightIcon,
+  DragIndicator as GripIcon,
+} from '@mui/icons-material';
 import { useMissionControl } from '@/lib/store';
 import { triggerAutoDispatch, shouldTriggerAutoDispatch } from '@/lib/auto-dispatch';
 import type { Task, TaskStatus } from '@/lib/types';
 import { TaskModal } from './TaskModal';
 import { formatDistanceToNow } from 'date-fns';
+import { mcColors } from '@/theme/theme';
 
 interface MissionQueueProps {
   workspaceId?: string;
 }
 
 const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
-  { id: 'planning', label: '📋 PLANNING', color: 'border-t-mc-accent-purple' },
-  { id: 'inbox', label: 'INBOX', color: 'border-t-mc-accent-pink' },
-  { id: 'assigned', label: 'ASSIGNED', color: 'border-t-mc-accent-yellow' },
-  { id: 'in_progress', label: 'IN PROGRESS', color: 'border-t-mc-accent' },
-  { id: 'testing', label: 'TESTING', color: 'border-t-mc-accent-cyan' },
-  { id: 'review', label: 'REVIEW', color: 'border-t-mc-accent-purple' },
-  { id: 'done', label: 'DONE', color: 'border-t-mc-accent-green' },
+  { id: 'planning', label: '📋 PLANNING', color: mcColors.accentPurple },
+  { id: 'inbox', label: 'INBOX', color: mcColors.accentPink },
+  { id: 'assigned', label: 'ASSIGNED', color: mcColors.accentYellow },
+  { id: 'in_progress', label: 'IN PROGRESS', color: mcColors.accent },
+  { id: 'testing', label: 'TESTING', color: mcColors.accentCyan },
+  { id: 'review', label: 'REVIEW', color: mcColors.accentPurple },
+  { id: 'done', label: 'DONE', color: mcColors.accentGreen },
 ];
 
 export function MissionQueue({ workspaceId }: MissionQueueProps) {
@@ -48,10 +63,8 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
       return;
     }
 
-    // Optimistic update
     updateTaskStatus(draggedTask.id, targetStatus);
 
-    // Persist to API
     try {
       const res = await fetch(`/api/tasks/${draggedTask.id}`, {
         method: 'PATCH',
@@ -60,7 +73,6 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
       });
 
       if (res.ok) {
-        // Add event
         addEvent({
           id: crypto.randomUUID(),
           type: targetStatus === 'done' ? 'task_completed' : 'task_status_changed',
@@ -69,7 +81,6 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
           created_at: new Date().toISOString(),
         });
 
-        // Check if auto-dispatch should be triggered and execute it
         if (shouldTriggerAutoDispatch(draggedTask.status, targetStatus, draggedTask.assigned_agent_id)) {
           const result = await triggerAutoDispatch({
             taskId: draggedTask.id,
@@ -81,13 +92,11 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
 
           if (!result.success) {
             console.error('Auto-dispatch failed:', result.error);
-            // Optionally show error to user here if needed
           }
         }
       }
     } catch (error) {
       console.error('Failed to update task status:', error);
-      // Revert on error
       updateTaskStatus(draggedTask.id, draggedTask.status);
     }
 
@@ -95,59 +104,97 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
-      <div className="p-3 border-b border-mc-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <ChevronRight className="w-4 h-4 text-mc-text-secondary" />
-          <span className="text-sm font-medium uppercase tracking-wider">Mission Queue</span>
-        </div>
-        <button
+      <Box
+        sx={{
+          p: 1.5,
+          borderBottom: 1,
+          borderColor: 'divider',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <ChevronRightIcon sx={{ color: 'text.secondary', fontSize: 16 }} />
+          <Typography variant="body2" fontWeight="medium" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Mission Queue
+          </Typography>
+        </Stack>
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<AddIcon />}
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-mc-accent-pink text-mc-bg rounded text-sm font-medium hover:bg-mc-accent-pink/90"
+          sx={{ bgcolor: mcColors.accentPink, '&:hover': { bgcolor: `${mcColors.accentPink}cc` } }}
         >
-          <Plus className="w-4 h-4" />
           New Task
-        </button>
-      </div>
+        </Button>
+      </Box>
 
       {/* Kanban Columns */}
-      <div className="flex-1 flex gap-3 p-3 overflow-x-auto">
+      <Box sx={{ flex: 1, display: 'flex', gap: 1.5, p: 1.5, overflowX: 'auto' }}>
         {COLUMNS.map((column) => {
           const columnTasks = getTasksByStatus(column.id);
           return (
-            <div
+            <Box
               key={column.id}
-              className={`flex-1 min-w-[220px] max-w-[300px] flex flex-col bg-mc-bg rounded-lg border border-mc-border/50 border-t-2 ${column.color}`}
+              sx={{
+                flex: '1 1 220px',
+                minWidth: 220,
+                maxWidth: 300,
+                display: 'flex',
+                flexDirection: 'column',
+                bgcolor: 'background.default',
+                borderRadius: 1,
+                border: 1,
+                borderColor: 'divider',
+                borderTop: 2,
+                borderTopColor: column.color,
+              }}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
             >
               {/* Column Header */}
-              <div className="p-2 border-b border-mc-border flex items-center justify-between">
-                <span className="text-xs font-medium uppercase text-mc-text-secondary">
+              <Box
+                sx={{
+                  p: 1,
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Typography variant="caption" fontWeight="medium" sx={{ textTransform: 'uppercase' }} color="text.secondary">
                   {column.label}
-                </span>
-                <span className="text-xs bg-mc-bg-tertiary px-2 py-0.5 rounded text-mc-text-secondary">
-                  {columnTasks.length}
-                </span>
-              </div>
+                </Typography>
+                <Chip
+                  label={columnTasks.length}
+                  size="small"
+                  sx={{ height: 20, fontSize: 10, bgcolor: mcColors.bgTertiary }}
+                />
+              </Box>
 
               {/* Tasks */}
-              <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                {columnTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onDragStart={handleDragStart}
-                    onClick={() => setEditingTask(task)}
-                    isDragging={draggedTask?.id === task.id}
-                  />
-                ))}
-              </div>
-            </div>
+              <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
+                <Stack spacing={1}>
+                  {columnTasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      onDragStart={handleDragStart}
+                      onClick={() => setEditingTask(task)}
+                      isDragging={draggedTask?.id === task.id}
+                    />
+                  ))}
+                </Stack>
+              </Box>
+            </Box>
           );
         })}
-      </div>
+      </Box>
 
       {/* Modals */}
       {showCreateModal && (
@@ -156,7 +203,7 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
       {editingTask && (
         <TaskModal task={editingTask} onClose={() => setEditingTask(null)} workspaceId={workspaceId} />
       )}
-    </div>
+    </Box>
   );
 }
 
@@ -168,74 +215,148 @@ interface TaskCardProps {
 }
 
 function TaskCard({ task, onDragStart, onClick, isDragging }: TaskCardProps) {
-  const priorityStyles = {
-    low: 'text-mc-text-secondary',
-    normal: 'text-mc-accent',
-    high: 'text-mc-accent-yellow',
-    urgent: 'text-mc-accent-red',
-  };
-
-  const priorityDots = {
-    low: 'bg-mc-text-secondary/40',
-    normal: 'bg-mc-accent',
-    high: 'bg-mc-accent-yellow',
-    urgent: 'bg-mc-accent-red',
+  const priorityColors = {
+    low: mcColors.textSecondary,
+    normal: mcColors.accent,
+    high: mcColors.accentYellow,
+    urgent: mcColors.accentRed,
   };
 
   const isPlanning = task.status === 'planning';
 
   return (
-    <div
+    <Card
       draggable
       onDragStart={(e) => onDragStart(e, task)}
       onClick={onClick}
-      className={`group bg-mc-bg-secondary border rounded-lg cursor-pointer transition-all hover:shadow-lg hover:shadow-black/20 ${
-        isDragging ? 'opacity-50 scale-95' : ''
-      } ${isPlanning ? 'border-purple-500/40 hover:border-purple-500' : 'border-mc-border/50 hover:border-mc-accent/40'}`}
+      sx={{
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        opacity: isDragging ? 0.5 : 1,
+        transform: isDragging ? 'scale(0.95)' : 'none',
+        borderColor: isPlanning ? `${mcColors.accentPurple}40` : 'divider',
+        '&:hover': {
+          borderColor: isPlanning ? mcColors.accentPurple : `${mcColors.accent}40`,
+          boxShadow: 4,
+        },
+        '&:hover .drag-handle': {
+          opacity: 1,
+        },
+      }}
     >
-      {/* Drag handle bar */}
-      <div className="flex items-center justify-center py-1.5 border-b border-mc-border/30 opacity-0 group-hover:opacity-100 transition-opacity">
-        <GripVertical className="w-4 h-4 text-mc-text-secondary/50 cursor-grab" />
-      </div>
+      {/* Drag handle */}
+      <Box
+        className="drag-handle"
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          py: 0.75,
+          borderBottom: 1,
+          borderColor: 'divider',
+          opacity: 0,
+          transition: 'opacity 0.2s',
+        }}
+      >
+        <GripIcon sx={{ fontSize: 16, color: 'text.secondary', opacity: 0.5, cursor: 'grab' }} />
+      </Box>
 
-      {/* Card content */}
-      <div className="p-4">
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         {/* Title */}
-        <h4 className="text-sm font-medium leading-snug line-clamp-2 mb-3">
+        <Typography
+          variant="body2"
+          fontWeight="medium"
+          sx={{
+            mb: 1.5,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
           {task.title}
-        </h4>
-        
+        </Typography>
+
         {/* Planning mode indicator */}
         {isPlanning && (
-          <div className="flex items-center gap-2 mb-3 py-2 px-3 bg-purple-500/10 rounded-md border border-purple-500/20">
-            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse flex-shrink-0" />
-            <span className="text-xs text-purple-400 font-medium">Continue planning</span>
-          </div>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              mb: 1.5,
+              py: 1,
+              px: 1.5,
+              bgcolor: `${mcColors.accentPurple}10`,
+              borderRadius: 1,
+              border: 1,
+              borderColor: `${mcColors.accentPurple}20`,
+            }}
+          >
+            <Box
+              sx={{
+                width: 8,
+                height: 8,
+                bgcolor: mcColors.accentPurple,
+                borderRadius: '50%',
+                animation: 'pulse 2s infinite',
+              }}
+            />
+            <Typography variant="caption" fontWeight="medium" sx={{ color: mcColors.accentPurple }}>
+              Continue planning
+            </Typography>
+          </Box>
         )}
 
         {/* Assigned agent */}
         {task.assigned_agent && (
-          <div className="flex items-center gap-2 mb-3 py-1.5 px-2 bg-mc-bg-tertiary/50 rounded">
-            <span className="text-base">{(task.assigned_agent as unknown as { avatar_emoji: string }).avatar_emoji}</span>
-            <span className="text-xs text-mc-text-secondary truncate">
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              mb: 1.5,
+              py: 0.75,
+              px: 1,
+              bgcolor: `${mcColors.bgTertiary}50`,
+              borderRadius: 1,
+            }}
+          >
+            <Typography>{(task.assigned_agent as unknown as { avatar_emoji: string }).avatar_emoji}</Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>
               {(task.assigned_agent as unknown as { name: string }).name}
-            </span>
-          </div>
+            </Typography>
+          </Box>
         )}
 
-        {/* Footer: priority + timestamp */}
-        <div className="flex items-center justify-between pt-2 border-t border-mc-border/20">
-          <div className="flex items-center gap-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${priorityDots[task.priority]}`} />
-            <span className={`text-xs capitalize ${priorityStyles[task.priority]}`}>
+        {/* Footer */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            pt: 1,
+            borderTop: 1,
+            borderColor: 'divider',
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={0.75}>
+            <Box
+              sx={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                bgcolor: priorityColors[task.priority],
+              }}
+            />
+            <Typography variant="caption" sx={{ color: priorityColors[task.priority], textTransform: 'capitalize' }}>
               {task.priority}
-            </span>
-          </div>
-          <span className="text-[10px] text-mc-text-secondary/60">
+            </Typography>
+          </Stack>
+          <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.6, fontSize: 10 }}>
             {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
-          </span>
-        </div>
-      </div>
-    </div>
+          </Typography>
+        </Box>
+      </CardContent>
+    </Card>
   );
 }

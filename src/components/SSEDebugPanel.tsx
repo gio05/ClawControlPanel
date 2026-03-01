@@ -1,7 +1,21 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  Box,
+  Typography,
+  Button,
+  IconButton,
+  Chip,
+  Collapse,
+  Paper,
+  Stack,
+} from '@mui/material';
+import {
+  ExpandMore as ChevronDownIcon,
+  ChevronRight as ChevronRightIcon,
+} from '@mui/icons-material';
+import { mcColors } from '@/theme/theme';
 
 interface SSELogEntry {
   timestamp: Date;
@@ -31,22 +45,19 @@ export function SSEDebugPanel() {
       timestamp: new Date(),
       type,
       data
-    }, ...prev].slice(0, 50)); // Keep last 50
+    }, ...prev].slice(0, 50));
   }, []);
 
   useEffect(() => {
-    // Check if debug mode is enabled
     const debugEnabled = localStorage.getItem('MC_DEBUG') === 'true';
     setIsEnabled(debugEnabled);
 
     if (!debugEnabled) return;
 
-    // Intercept console.log for SSE events
     const originalLog = console.log;
     console.log = (...args: unknown[]) => {
       originalLog.apply(console, args);
 
-      // Capture SSE and STORE logs
       if (typeof args[0] === 'string') {
         const msg = args[0] as string;
         if (msg.includes('[SSE]') || msg.includes('[STORE]') || msg.includes('[API]')) {
@@ -62,7 +73,6 @@ export function SSEDebugPanel() {
     };
   }, [addLog]);
 
-  // Re-check debug mode on storage changes
   useEffect(() => {
     const handleStorage = () => {
       const debugEnabled = localStorage.getItem('MC_DEBUG') === 'true';
@@ -76,52 +86,91 @@ export function SSEDebugPanel() {
   if (!isEnabled) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 z-50">
-      <button
+    <Box sx={{ position: 'fixed', bottom: 16, left: 16, zIndex: 50 }}>
+      <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 bg-mc-bg-secondary border border-mc-border rounded-lg shadow-lg text-sm"
+        startIcon={isOpen ? <ChevronDownIcon /> : <ChevronRightIcon />}
+        sx={{
+          bgcolor: 'background.paper',
+          border: 1,
+          borderColor: 'divider',
+          boxShadow: 4,
+        }}
       >
-        {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-        <span className="text-mc-accent">Debug</span>
-        <span className="bg-mc-accent text-mc-bg px-2 py-0.5 rounded text-xs">
-          {logs.length}
-        </span>
-      </button>
+        <Typography component="span" sx={{ color: 'primary.main', mr: 1 }}>Debug</Typography>
+        <Chip label={logs.length} size="small" color="primary" />
+      </Button>
 
-      {isOpen && (
-        <div className="absolute bottom-12 left-0 w-96 max-h-80 bg-mc-bg-secondary border border-mc-border rounded-lg shadow-xl overflow-hidden">
-          <div className="p-2 border-b border-mc-border flex justify-between items-center">
-            <span className="text-sm font-medium">Debug Events</span>
-            <button
-              onClick={() => setLogs([])}
-              className="text-xs text-mc-text-secondary hover:text-mc-text"
-            >
+      <Collapse in={isOpen}>
+        <Paper
+          sx={{
+            position: 'absolute',
+            bottom: 48,
+            left: 0,
+            width: 384,
+            maxHeight: 320,
+            overflow: 'hidden',
+            boxShadow: 8,
+          }}
+        >
+          <Box
+            sx={{
+              p: 1,
+              borderBottom: 1,
+              borderColor: 'divider',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Typography variant="body2" fontWeight="medium">Debug Events</Typography>
+            <Button size="small" onClick={() => setLogs([])}>
               Clear
-            </button>
-          </div>
-          <div className="overflow-y-auto max-h-64 p-2 space-y-1 font-mono text-xs">
+            </Button>
+          </Box>
+          <Box sx={{ overflow: 'auto', maxHeight: 256, p: 1, fontFamily: 'monospace', fontSize: '0.75rem' }}>
             {logs.length === 0 ? (
-              <div className="text-mc-text-secondary text-center py-4">
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
                 Waiting for events...
-              </div>
+              </Typography>
             ) : (
-              logs.map((log, i) => (
-                <div key={i} className="p-2 bg-mc-bg rounded border border-mc-border">
-                  <div className="flex justify-between text-mc-text-secondary">
-                    <span className="text-mc-accent">{log.type}</span>
-                    <span>{log.timestamp.toLocaleTimeString()}</span>
-                  </div>
-                  {log.data !== null && log.data !== undefined && (
-                    <pre className="mt-1 text-mc-text overflow-x-auto whitespace-pre-wrap">
-                      {formatLogData(log.data)}
-                    </pre>
-                  )}
-                </div>
-              ))
+              <Stack spacing={0.5}>
+                {logs.map((log, i) => (
+                  <Box
+                    key={i}
+                    sx={{
+                      p: 1,
+                      bgcolor: 'background.default',
+                      borderRadius: 1,
+                      border: 1,
+                      borderColor: 'divider',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', color: 'text.secondary' }}>
+                      <Typography variant="caption" sx={{ color: 'primary.main' }}>{log.type}</Typography>
+                      <Typography variant="caption">{log.timestamp.toLocaleTimeString()}</Typography>
+                    </Box>
+                    {log.data !== null && log.data !== undefined && (
+                      <Typography
+                        component="pre"
+                        sx={{
+                          mt: 0.5,
+                          color: 'text.primary',
+                          overflow: 'auto',
+                          whiteSpace: 'pre-wrap',
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {formatLogData(log.data)}
+                      </Typography>
+                    )}
+                  </Box>
+                ))}
+              </Stack>
             )}
-          </div>
-        </div>
-      )}
-    </div>
+          </Box>
+        </Paper>
+      </Collapse>
+    </Box>
   );
 }

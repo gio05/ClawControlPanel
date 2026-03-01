@@ -1,9 +1,32 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, Search, Download, Check, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Box,
+  Typography,
+  Button,
+  IconButton,
+  Stack,
+  Alert,
+  CircularProgress,
+  Checkbox,
+  Chip,
+} from '@mui/material';
+import {
+  Close as CloseIcon,
+  Search as SearchIcon,
+  Download as DownloadIcon,
+  Check as CheckIcon,
+  Warning as WarningIcon,
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
 import { useMissionControl } from '@/lib/store';
 import type { DiscoveredAgent } from '@/lib/types';
+import { mcColors } from '@/theme/theme';
 
 interface DiscoverAgentsModalProps {
   onClose: () => void;
@@ -98,7 +121,6 @@ export function DiscoverAgentsModal({ onClose, workspaceId }: DiscoverAgentsModa
 
       const data = await res.json();
 
-      // Add imported agents to the store
       for (const agent of data.imported) {
         addAgent(agent);
       }
@@ -108,7 +130,6 @@ export function DiscoverAgentsModal({ onClose, workspaceId }: DiscoverAgentsModa
         skipped: data.skipped.length,
       });
 
-      // Refresh the discovery list
       await discover();
       setSelectedIds(new Set());
     } catch (err) {
@@ -121,188 +142,134 @@ export function DiscoverAgentsModal({ onClose, workspaceId }: DiscoverAgentsModa
   const availableCount = agents.filter((a) => !a.already_imported).length;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-mc-bg-secondary border border-mc-border rounded-lg w-full max-w-2xl max-h-[80vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-mc-border">
-          <div>
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Search className="w-5 h-5 text-mc-accent" />
-              Discover Gateway Agents
-            </h2>
-            <p className="text-sm text-mc-text-secondary mt-1">
-              Import existing agents from the OpenClaw Gateway
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-mc-bg-tertiary rounded"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Dialog open onClose={onClose} maxWidth="md" fullWidth sx={{ '& .MuiDialog-paper': { maxHeight: '80vh' } }}>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: 1, borderColor: 'divider' }}>
+        <Box>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <SearchIcon color="primary" />
+            <Typography variant="h6">Discover Gateway Agents</Typography>
+          </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Import existing agents from the OpenClaw Gateway
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} size="small">
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {loading && (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-mc-accent mr-3" />
-              <span className="text-mc-text-secondary">Discovering agents from Gateway...</span>
-            </div>
-          )}
+      <DialogContent sx={{ py: 3 }}>
+        {loading && (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 6 }}>
+            <CircularProgress size={24} sx={{ mr: 1.5 }} />
+            <Typography color="text.secondary">Discovering agents from Gateway...</Typography>
+          </Box>
+        )}
 
-          {error && (
-            <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-lg mb-4">
-              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-              <span className="text-sm text-red-400">{error}</span>
-            </div>
-          )}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} icon={<WarningIcon />}>
+            {error}
+          </Alert>
+        )}
 
-          {importResult && (
-            <div className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-lg mb-4">
-              <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
-              <span className="text-sm text-green-400">
-                Imported {importResult.imported} agent{importResult.imported !== 1 ? 's' : ''}
-                {importResult.skipped > 0 && ` (${importResult.skipped} skipped)`}
-              </span>
-            </div>
-          )}
+        {importResult && (
+          <Alert severity="success" sx={{ mb: 2 }} icon={<CheckIcon />}>
+            Imported {importResult.imported} agent{importResult.imported !== 1 ? 's' : ''}
+            {importResult.skipped > 0 && ` (${importResult.skipped} skipped)`}
+          </Alert>
+        )}
 
-          {!loading && !error && agents.length === 0 && (
-            <div className="text-center py-12 text-mc-text-secondary">
-              <p>No agents found in the Gateway.</p>
-              <p className="text-sm mt-2">Make sure the OpenClaw Gateway is running and has agents configured.</p>
-            </div>
-          )}
+        {!loading && !error && agents.length === 0 && (
+          <Box sx={{ textAlign: 'center', py: 6 }}>
+            <Typography color="text.secondary">No agents found in the Gateway.</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Make sure the OpenClaw Gateway is running and has agents configured.
+            </Typography>
+          </Box>
+        )}
 
-          {!loading && agents.length > 0 && (
-            <>
-              {/* Selection controls */}
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-mc-text-secondary">
-                  {agents.length} agent{agents.length !== 1 ? 's' : ''} found
-                  {availableCount < agents.length && ` · ${agents.length - availableCount} already imported`}
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={discover}
-                    className="flex items-center gap-1 px-2 py-1 text-xs text-mc-text-secondary hover:text-mc-text hover:bg-mc-bg-tertiary rounded"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    Refresh
-                  </button>
-                  {availableCount > 0 && (
-                    <>
-                      <button
-                        onClick={selectAllAvailable}
-                        className="px-2 py-1 text-xs text-mc-accent hover:bg-mc-accent/10 rounded"
-                      >
-                        Select All
-                      </button>
-                      <button
-                        onClick={deselectAll}
-                        className="px-2 py-1 text-xs text-mc-text-secondary hover:bg-mc-bg-tertiary rounded"
-                      >
-                        Deselect All
-                      </button>
-                    </>
+        {!loading && agents.length > 0 && (
+          <>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                {agents.length} agent{agents.length !== 1 ? 's' : ''} found
+                {availableCount < agents.length && ` · ${agents.length - availableCount} already imported`}
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                <Button size="small" startIcon={<RefreshIcon />} onClick={discover}>
+                  Refresh
+                </Button>
+                {availableCount > 0 && (
+                  <>
+                    <Button size="small" onClick={selectAllAvailable}>
+                      Select All
+                    </Button>
+                    {selectedIds.size > 0 && (
+                      <Button size="small" onClick={deselectAll}>
+                        Deselect
+                      </Button>
+                    )}
+                  </>
+                )}
+              </Stack>
+            </Stack>
+
+            <Stack spacing={1}>
+              {agents.map((agent) => (
+                <Box
+                  key={agent.id}
+                  onClick={() => !agent.already_imported && toggleSelection(agent.id)}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    p: 2,
+                    bgcolor: 'background.default',
+                    borderRadius: 1,
+                    border: 1,
+                    borderColor: selectedIds.has(agent.id) ? 'primary.main' : 'divider',
+                    opacity: agent.already_imported ? 0.5 : 1,
+                    cursor: agent.already_imported ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s',
+                    '&:hover': !agent.already_imported ? { borderColor: 'primary.main' } : {},
+                  }}
+                >
+                  <Checkbox
+                    checked={selectedIds.has(agent.id)}
+                    disabled={agent.already_imported}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={() => toggleSelection(agent.id)}
+                  />
+                  <Typography variant="h5">🤖</Typography>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" fontWeight="medium">
+                      {agent.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {agent.model}
+                    </Typography>
+                  </Box>
+                  {agent.already_imported && (
+                    <Chip label="Imported" size="small" color="success" />
                   )}
-                </div>
-              </div>
+                </Box>
+              ))}
+            </Stack>
+          </>
+        )}
+      </DialogContent>
 
-              {/* Agent list */}
-              <div className="space-y-2">
-                {agents.map((agent) => {
-                  const isSelected = selectedIds.has(agent.id);
-                  const isImported = agent.already_imported;
-
-                  return (
-                    <div
-                      key={agent.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                        isImported
-                          ? 'border-mc-border/50 bg-mc-bg/50 opacity-60'
-                          : isSelected
-                          ? 'border-mc-accent/50 bg-mc-accent/5'
-                          : 'border-mc-border hover:border-mc-border/80 hover:bg-mc-bg-tertiary cursor-pointer'
-                      }`}
-                      onClick={() => !isImported && toggleSelection(agent.id)}
-                    >
-                      {/* Checkbox */}
-                      <div
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                          isImported
-                            ? 'border-green-500/50 bg-green-500/20'
-                            : isSelected
-                            ? 'border-mc-accent bg-mc-accent'
-                            : 'border-mc-border'
-                        }`}
-                      >
-                        {(isSelected || isImported) && (
-                          <Check className={`w-3 h-3 ${isImported ? 'text-green-400' : 'text-mc-bg'}`} />
-                        )}
-                      </div>
-
-                      {/* Avatar */}
-                      <span className="text-2xl">{isImported ? '🔗' : '🤖'}</span>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm truncate">{agent.name}</span>
-                          {isImported && (
-                            <span className="text-xs px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded">
-                              Imported
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-mc-text-secondary mt-0.5">
-                          {agent.model && <span>Model: {agent.model}</span>}
-                          {agent.channel && <span>Channel: {agent.channel}</span>}
-                          {agent.status && <span>Status: {agent.status}</span>}
-                          <span className="text-mc-text-secondary/60">ID: {agent.id}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-mc-border">
-          <span className="text-sm text-mc-text-secondary">
-            {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select agents to import'}
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-mc-text-secondary hover:text-mc-text"
-            >
-              {importResult ? 'Done' : 'Cancel'}
-            </button>
-            <button
-              onClick={handleImport}
-              disabled={selectedIds.size === 0 || importing}
-              className="flex items-center gap-2 px-4 py-2 bg-mc-accent text-mc-bg rounded text-sm font-medium hover:bg-mc-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {importing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Importing...
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4" />
-                  Import {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+      <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          startIcon={importing ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon />}
+          onClick={handleImport}
+          disabled={selectedIds.size === 0 || importing}
+        >
+          {importing ? 'Importing...' : `Import ${selectedIds.size} Agent${selectedIds.size !== 1 ? 's' : ''}`}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
