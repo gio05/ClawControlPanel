@@ -105,6 +105,9 @@ export function DiscoverAgentsModal({ onClose, workspaceId }: DiscoverAgentsModa
           name: a.name,
           model: a.model,
           workspace_id: workspaceId || 'default',
+          soul_md: a.soul_md,
+          user_md: a.user_md,
+          agents_md: a.agents_md,
         }));
 
       const res = await fetch('/api/agents/import', {

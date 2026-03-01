@@ -49,6 +49,9 @@ export interface DiscoveredAgent {
   model?: string;
   channel?: string;
   status?: string;
+  soul_md?: string;
+  user_md?: string;
+  agents_md?: string;
   already_imported: boolean;
   existing_agent_id?: string;
 }

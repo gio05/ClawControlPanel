@@ -20,11 +20,14 @@ import {
   Tabs,
   Tab,
   Stack,
+  Tooltip,
+  CircularProgress,
 } from '@mui/material';
 import {
   Close as CloseIcon,
   Save as SaveIcon,
   Delete as DeleteIcon,
+  Sync as SyncIcon,
 } from '@mui/icons-material';
 import { useMissionControl } from '@/lib/store';
 import type { Agent, AgentStatus } from '@/lib/types';
@@ -46,6 +49,8 @@ export function AgentModal({ agent, onClose, workspaceId, onAgentCreated }: Agen
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [defaultModel, setDefaultModel] = useState<string>('');
   const [modelsLoading, setModelsLoading] = useState(true);
+  const [syncingWorkspace, setSyncingWorkspace] = useState(false);
+  const [workspaceSyncError, setWorkspaceSyncError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: agent?.name || '',
@@ -80,6 +85,61 @@ export function AgentModal({ agent, onClose, workspaceId, onAgentCreated }: Agen
     };
     loadModels();
   }, [agent]);
+
+  // Auto-fetch workspace files from OpenClaw for gateway agents that have empty workspace fields
+  useEffect(() => {
+    if (!agent?.gateway_agent_id) return;
+    const hasWorkspaceFiles = agent.soul_md || agent.user_md || agent.agents_md;
+    if (hasWorkspaceFiles) return;
+
+    const fetchWorkspaceFiles = async () => {
+      try {
+        const res = await fetch(`/api/agents/${agent.id}/workspace`);
+        if (res.ok) {
+          const data = await res.json();
+          setForm(prev => ({
+            ...prev,
+            soul_md: data.soul_md || prev.soul_md,
+            user_md: data.user_md || prev.user_md,
+            agents_md: data.agents_md || prev.agents_md,
+          }));
+        }
+      } catch {
+        // Silent failure — workspace files are optional
+      }
+    };
+
+    fetchWorkspaceFiles();
+  }, [agent]);
+
+  const handleSyncWorkspace = async () => {
+    if (!agent?.id || !agent.gateway_agent_id) return;
+    setSyncingWorkspace(true);
+    setWorkspaceSyncError(null);
+
+    try {
+      const res = await fetch(`/api/agents/${agent.id}/workspace`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setForm(prev => ({
+          ...prev,
+          soul_md: data.workspace?.soul_md ?? prev.soul_md,
+          user_md: data.workspace?.user_md ?? prev.user_md,
+          agents_md: data.workspace?.agents_md ?? prev.agents_md,
+        }));
+        if (data.agent) {
+          updateAgent(data.agent);
+        }
+      } else {
+        const errorData = await res.json();
+        setWorkspaceSyncError(errorData.error || 'Sync failed');
+      }
+    } catch {
+      setWorkspaceSyncError('Failed to connect');
+    } finally {
+      setSyncingWorkspace(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,6 +194,8 @@ export function AgentModal({ agent, onClose, workspaceId, onAgentCreated }: Agen
     }
   };
 
+  const isGatewayAgent = !!agent?.gateway_agent_id;
+  const SYNC_TOOLTIP = 'Fetch SOUL.md, USER.md, and AGENTS.md from the OpenClaw workspace';
   const tabs = ['Info', 'SOUL.md', 'USER.md', 'AGENTS.md'];
 
   return (
@@ -258,42 +320,99 @@ export function AgentModal({ agent, onClose, workspaceId, onAgentCreated }: Agen
           )}
 
           {activeTab === 1 && (
-            <TextField
-              label="SOUL.md"
-              value={form.soul_md}
-              onChange={(e) => setForm({ ...form, soul_md: e.target.value })}
-              multiline
-              rows={15}
-              fullWidth
-              placeholder="Define the agent's personality, capabilities, and behavior..."
-              sx={{ fontFamily: 'monospace' }}
-            />
+            <Stack spacing={1}>
+              {isGatewayAgent && (
+                <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={1}>
+                  {workspaceSyncError && (
+                    <Typography variant="caption" color="error">{workspaceSyncError}</Typography>
+                  )}
+                  <Tooltip title={SYNC_TOOLTIP}>
+                    <Button
+                      size="small"
+                      startIcon={syncingWorkspace ? <CircularProgress size={14} color="inherit" /> : <SyncIcon />}
+                      onClick={handleSyncWorkspace}
+                      disabled={syncingWorkspace}
+                    >
+                      {syncingWorkspace ? 'Syncing…' : 'Sync from OpenClaw'}
+                    </Button>
+                  </Tooltip>
+                </Stack>
+              )}
+              <TextField
+                label="SOUL.md"
+                value={form.soul_md}
+                onChange={(e) => setForm({ ...form, soul_md: e.target.value })}
+                multiline
+                rows={15}
+                fullWidth
+                placeholder="Define the agent's personality, capabilities, and behavior..."
+                sx={{ fontFamily: 'monospace' }}
+              />
+            </Stack>
           )}
 
           {activeTab === 2 && (
-            <TextField
-              label="USER.md"
-              value={form.user_md}
-              onChange={(e) => setForm({ ...form, user_md: e.target.value })}
-              multiline
-              rows={15}
-              fullWidth
-              placeholder="Define user-specific context and preferences..."
-              sx={{ fontFamily: 'monospace' }}
-            />
+            <Stack spacing={1}>
+              {isGatewayAgent && (
+                <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={1}>
+                  {workspaceSyncError && (
+                    <Typography variant="caption" color="error">{workspaceSyncError}</Typography>
+                  )}
+                  <Tooltip title={SYNC_TOOLTIP}>
+                    <Button
+                      size="small"
+                      startIcon={syncingWorkspace ? <CircularProgress size={14} color="inherit" /> : <SyncIcon />}
+                      onClick={handleSyncWorkspace}
+                      disabled={syncingWorkspace}
+                    >
+                      {syncingWorkspace ? 'Syncing…' : 'Sync from OpenClaw'}
+                    </Button>
+                  </Tooltip>
+                </Stack>
+              )}
+              <TextField
+                label="USER.md"
+                value={form.user_md}
+                onChange={(e) => setForm({ ...form, user_md: e.target.value })}
+                multiline
+                rows={15}
+                fullWidth
+                placeholder="Define user-specific context and preferences..."
+                sx={{ fontFamily: 'monospace' }}
+              />
+            </Stack>
           )}
 
           {activeTab === 3 && (
-            <TextField
-              label="AGENTS.md"
-              value={form.agents_md}
-              onChange={(e) => setForm({ ...form, agents_md: e.target.value })}
-              multiline
-              rows={15}
-              fullWidth
-              placeholder="Define how this agent interacts with other agents..."
-              sx={{ fontFamily: 'monospace' }}
-            />
+            <Stack spacing={1}>
+              {isGatewayAgent && (
+                <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={1}>
+                  {workspaceSyncError && (
+                    <Typography variant="caption" color="error">{workspaceSyncError}</Typography>
+                  )}
+                  <Tooltip title={SYNC_TOOLTIP}>
+                    <Button
+                      size="small"
+                      startIcon={syncingWorkspace ? <CircularProgress size={14} color="inherit" /> : <SyncIcon />}
+                      onClick={handleSyncWorkspace}
+                      disabled={syncingWorkspace}
+                    >
+                      {syncingWorkspace ? 'Syncing…' : 'Sync from OpenClaw'}
+                    </Button>
+                  </Tooltip>
+                </Stack>
+              )}
+              <TextField
+                label="AGENTS.md"
+                value={form.agents_md}
+                onChange={(e) => setForm({ ...form, agents_md: e.target.value })}
+                multiline
+                rows={15}
+                fullWidth
+                placeholder="Define how this agent interacts with other agents..."
+                sx={{ fontFamily: 'monospace' }}
+              />
+            </Stack>
           )}
         </DialogContent>
 
@@ -323,3 +442,4 @@ export function AgentModal({ agent, onClose, workspaceId, onAgentCreated }: Agen
     </Dialog>
   );
 }
+

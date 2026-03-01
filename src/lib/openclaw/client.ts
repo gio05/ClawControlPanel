@@ -464,6 +464,53 @@ export class OpenClawClient extends EventEmitter {
     return [];
   }
 
+  /**
+   * Read a workspace file from an agent's OpenClaw workspace.
+   * Uses the workspace.read RPC method with the agent's session key.
+   * Returns null if the method is not available or the file does not exist.
+   */
+  async readAgentWorkspaceFile(agentId: string, filePath: string): Promise<string | null> {
+    const sessionKey = `agent:main:${agentId}`;
+    try {
+      const result = await this.call<{ content?: string; text?: string; data?: string } | string>(
+        'workspace.read',
+        { sessionKey, path: filePath }
+      );
+      if (typeof result === 'string') {
+        return result;
+      }
+      if (result && typeof result === 'object') {
+        const content = (result as Record<string, unknown>).content
+          ?? (result as Record<string, unknown>).text
+          ?? (result as Record<string, unknown>).data;
+        if (typeof content === 'string') {
+          return content;
+        }
+      }
+      return null;
+    } catch {
+      // workspace.read not available or file doesn't exist — not an error
+      return null;
+    }
+  }
+
+  /**
+   * Fetch all workspace files (SOUL.md, USER.md, AGENTS.md) for a gateway agent.
+   * Returns an object with whichever files were successfully read.
+   */
+  async getAgentWorkspaceFiles(agentId: string): Promise<{
+    soul_md: string | null;
+    user_md: string | null;
+    agents_md: string | null;
+  }> {
+    const [soul_md, user_md, agents_md] = await Promise.all([
+      this.readAgentWorkspaceFile(agentId, 'SOUL.md'),
+      this.readAgentWorkspaceFile(agentId, 'USER.md'),
+      this.readAgentWorkspaceFile(agentId, 'AGENTS.md'),
+    ]);
+    return { soul_md, user_md, agents_md };
+  }
+
   // Node methods (device capabilities)
   async listNodes(): Promise<unknown[]> {
     return this.call<unknown[]>('node.list');
