@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="mission-control.png" alt="Mission Control" width="600" />
+  <img src="mission-control.png" alt="ClawControlPanel" width="600" />
 </p>
 
-<h1 align="center">🦞 Mission Control</h1>
+<h1 align="center">🦞 ClawControlPanel</h1>
 
 <p align="center">
   <strong>AI Agent Orchestration Dashboard</strong><br>
@@ -18,13 +18,11 @@
 </p>
 
 <p align="center">
-  <a href="https://missioncontrol.ghray.com"><strong>🎮 Live Demo</strong></a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-docker">Docker</a> •
   <a href="#-features">Features</a> •
   <a href="#-how-it-works">How It Works</a> •
-  <a href="#-configuration">Configuration</a> •
-  <a href="#-contributors">Contributors</a>
+  <a href="#-configuration">Configuration</a>
 </p>
 
 ---
@@ -88,8 +86,8 @@
 
 ```bash
 # Clone
-git clone https://github.com/crshdn/mission-control.git
-cd mission-control
+git clone https://github.com/gio05/ClawControlPanel.git
+cd ClawControlPanel
 
 # Install dependencies
 npm install
@@ -354,117 +352,6 @@ kill -9 <PID>
 3. Commit your changes: `git commit -m 'feat: add amazing feature'`
 4. Push: `git push origin feature/amazing-feature`
 5. Open a Pull Request
-
----
-
-## 👏 Contributors
-
-Mission Control is built by a growing community. Thank you to everyone who has contributed!
-
-<table>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/superlowburn">
-        <img src="https://github.com/superlowburn.png?size=80" width="80" height="80" style="border-radius:50%" alt="Steve" /><br />
-        <sub><b>Steve</b></sub>
-      </a><br />
-      <sub>Device Identity</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/rchristman89">
-        <img src="https://github.com/rchristman89.png?size=80" width="80" height="80" style="border-radius:50%" alt="Ryan Christman" /><br />
-        <sub><b>Ryan Christman</b></sub>
-      </a><br />
-      <sub>Port Configuration</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/nicozefrench">
-        <img src="https://github.com/nicozefrench.png?size=80" width="80" height="80" style="border-radius:50%" alt="nicozefrench" /><br />
-        <sub><b>nicozefrench</b></sub>
-      </a><br />
-      <sub>ARIA Hooks</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/misterdas">
-        <img src="https://github.com/misterdas.png?size=80" width="80" height="80" style="border-radius:50%" alt="GOPAL" /><br />
-        <sub><b>GOPAL</b></sub>
-      </a><br />
-      <sub>Node v25 Support</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/joralemarti">
-        <img src="https://github.com/joralemarti.png?size=80" width="80" height="80" style="border-radius:50%" alt="Jorge Martinez" /><br />
-        <sub><b>Jorge Martinez</b></sub>
-      </a><br />
-      <sub>Orchestration</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/niks918">
-        <img src="https://github.com/niks918.png?size=80" width="80" height="80" style="border-radius:50%" alt="Nik" /><br />
-        <sub><b>Nik</b></sub>
-      </a><br />
-      <sub>Planning & Dispatch</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/gmb9000">
-        <img src="https://github.com/gmb9000.png?size=80" width="80" height="80" style="border-radius:50%" alt="Michael G" /><br />
-        <sub><b>Michael G</b></sub>
-      </a><br />
-      <sub>Usage Dashboard</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/Z8Medina">
-        <img src="https://github.com/Z8Medina.png?size=80" width="80" height="80" style="border-radius:50%" alt="Z8Medina" /><br />
-        <sub><b>Z8Medina</b></sub>
-      </a><br />
-      <sub>Metabase Integration</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/markphelps">
-        <img src="https://github.com/markphelps.png?size=80" width="80" height="80" style="border-radius:50%" alt="Mark Phelps" /><br />
-        <sub><b>Mark Phelps</b></sub>
-      </a><br />
-      <sub>Gateway Agent Discovery 💡</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/muneale">
-        <img src="https://github.com/muneale.png?size=80" width="80" height="80" style="border-radius:50%" alt="Alessio" /><br />
-        <sub><b>Alessio</b></sub>
-      </a><br />
-      <sub>Docker Support</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/JamesTsetsekas">
-        <img src="https://github.com/JamesTsetsekas.png?size=80" width="80" height="80" style="border-radius:50%" alt="James Tsetsekas" /><br />
-        <sub><b>James Tsetsekas</b></sub>
-      </a><br />
-      <sub>Planning Flow Fixes</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/nice-and-precise">
-        <img src="https://github.com/nice-and-precise.png?size=80" width="80" height="80" style="border-radius:50%" alt="nice-and-precise" /><br />
-        <sub><b>nice-and-precise</b></sub>
-      </a><br />
-      <sub>Agent Protocol Docs</sub>
-    </td>
-  </tr>
-</table>
-
----
-
-## ⭐ Star History
-
-<a href="https://www.star-history.com/#crshdn/mission-control&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=crshdn/mission-control&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=crshdn/mission-control&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=crshdn/mission-control&type=Date" width="600" />
-  </picture>
-</a>
 
 ---
 
