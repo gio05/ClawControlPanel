@@ -109,7 +109,7 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
   };
 
   return (
-    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* Header */}
       <Box
         sx={{
@@ -120,6 +120,7 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
           alignItems: 'center',
           justifyContent: 'space-between',
           bgcolor: 'background.paper',
+          flexShrink: 0,
         }}
       >
         <Stack direction="row" alignItems="center" spacing={1.5}>
@@ -147,7 +148,18 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
       </Box>
 
       {/* Kanban Columns */}
-      <Box sx={{ flex: 1, display: 'flex', gap: 2, p: 2, overflowX: 'auto', bgcolor: 'background.default' }}>
+      <Box 
+        sx={{ 
+          flex: 1, 
+          display: 'flex', 
+          gap: 2, 
+          p: 2, 
+          overflowX: 'auto', 
+          overflowY: 'auto',
+          bgcolor: 'background.default',
+          minHeight: 0,
+        }}
+      >
         {COLUMNS.map((column) => {
           const columnTasks = getTasksByStatus(column.id);
           return (

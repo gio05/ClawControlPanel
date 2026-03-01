@@ -70,12 +70,14 @@ export function Header({ workspace }: HeaderProps) {
 
   return (
     <AppBar
-      position="static"
+      position="sticky"
       sx={{
         bgcolor: 'background.paper',
         borderBottom: 1,
         borderColor: 'divider',
         boxShadow: 'none',
+        flexShrink: 0,
+        zIndex: 1100,
       }}
     >
       <Toolbar sx={{ height: 64, minHeight: 64, px: 3 }}>

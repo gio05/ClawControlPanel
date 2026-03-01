@@ -23,6 +23,7 @@ interface MissionControlState {
   isOnline: boolean;
   isLoading: boolean;
   selectedBusiness: string;
+  sidebarCollapsed: boolean;
 
   // Actions
   setAgents: (agents: Agent[]) => void;
@@ -52,6 +53,9 @@ interface MissionControlState {
   setAgentOpenClawSession: (agentId: string, session: OpenClawSession | null) => void;
   setOpenclawMessages: (messages: Message[]) => void;
   addOpenclawMessage: (message: Message) => void;
+  
+  // Sidebar actions
+  setSidebarCollapsed: (collapsed: boolean) => void;
 }
 
 export const useMissionControl = create<MissionControlState>((set) => ({
@@ -69,6 +73,7 @@ export const useMissionControl = create<MissionControlState>((set) => ({
   isOnline: false,
   isLoading: true,
   selectedBusiness: 'all',
+  sidebarCollapsed: false,
 
   // Setters
   setAgents: (agents) => set({ agents }),
@@ -154,4 +159,7 @@ export const useMissionControl = create<MissionControlState>((set) => ({
   setOpenclawMessages: (messages) => set({ openclawMessages: messages }),
   addOpenclawMessage: (message) =>
     set((state) => ({ openclawMessages: [...state.openclawMessages, message] })),
+    
+  // Sidebar actions
+  setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
 }));
