@@ -8,6 +8,9 @@ interface ImportAgentRequest {
   name: string;
   model?: string;
   workspace_id?: string;
+  soul_md?: string;
+  user_md?: string;
+  agents_md?: string;
 }
 
 interface ImportRequest {
@@ -64,8 +67,8 @@ export async function POST(request: NextRequest) {
         const workspaceId = agentReq.workspace_id || 'default';
 
         run(
-          `INSERT INTO agents (id, name, role, description, avatar_emoji, is_master, workspace_id, model, source, gateway_agent_id, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO agents (id, name, role, description, avatar_emoji, is_master, workspace_id, model, soul_md, user_md, agents_md, source, gateway_agent_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             id,
             agentReq.name,
@@ -75,6 +78,9 @@ export async function POST(request: NextRequest) {
             0,
             workspaceId,
             agentReq.model || null,
+            agentReq.soul_md || null,
+            agentReq.user_md || null,
+            agentReq.agents_md || null,
             'gateway',
             agentReq.gateway_agent_id,
             now,

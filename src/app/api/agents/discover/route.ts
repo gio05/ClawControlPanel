@@ -14,7 +14,31 @@ interface GatewayAgent {
   model?: string;
   channel?: string;
   status?: string;
+  // Workspace files — may be returned by the gateway under various field names
+  soul_md?: string;
+  soulMd?: string;
+  soul?: string;
+  user_md?: string;
+  userMd?: string;
+  user?: string;
+  agents_md?: string;
+  agentsMd?: string;
+  agents?: string;
   [key: string]: unknown;
+}
+
+/**
+ * Extract workspace file content from a gateway agent response.
+ * Handles multiple possible field name conventions used by different gateway versions.
+ */
+function extractWorkspaceFile(ga: GatewayAgent, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = ga[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value;
+    }
+  }
+  return undefined;
 }
 
 // GET /api/agents/discover - Discover existing agents from the OpenClaw Gateway
@@ -70,6 +94,9 @@ export async function GET() {
         model: ga.model,
         channel: ga.channel,
         status: ga.status,
+        soul_md: extractWorkspaceFile(ga, 'soul_md', 'soulMd', 'soul'),
+        user_md: extractWorkspaceFile(ga, 'user_md', 'userMd', 'user'),
+        agents_md: extractWorkspaceFile(ga, 'agents_md', 'agentsMd', 'agents'),
         already_imported: alreadyImported,
         existing_agent_id: alreadyImported ? importedGatewayIds.get(gatewayId) : undefined,
       };
