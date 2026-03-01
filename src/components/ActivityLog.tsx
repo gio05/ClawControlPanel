@@ -1,16 +1,18 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Box, Typography, Stack, CircularProgress } from '@mui/material';
+import { Box, Typography, Stack, CircularProgress, alpha, useTheme } from '@mui/material';
 import { formatDistanceToNow } from 'date-fns';
 import type { TaskActivity } from '@/lib/types';
-import { mcColors } from '@/theme/theme';
+import { getColors } from '@/theme/theme';
 
 interface ActivityLogProps {
   taskId: string;
 }
 
 export function ActivityLog({ taskId }: ActivityLogProps) {
+  const theme = useTheme();
+  const colors = getColors(theme.palette.mode);
   const [activities, setActivities] = useState<TaskActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -102,47 +104,66 @@ export function ActivityLog({ taskId }: ActivityLogProps) {
   }
 
   return (
-    <Stack spacing={1.5}>
+    <Stack spacing={2}>
       {activities.map((activity) => (
         <Box
           key={activity.id}
           sx={{
             display: 'flex',
-            gap: 1.5,
-            p: 1.5,
-            bgcolor: 'background.default',
-            borderRadius: 1,
+            gap: 2,
+            p: 2,
+            bgcolor: 'background.paper',
+            borderRadius: 2.5,
             border: 1,
             borderColor: 'divider',
+            transition: 'all 0.15s ease-in-out',
+            '&:hover': {
+              borderColor: alpha(colors.accent, 0.2),
+            },
           }}
         >
-          <Typography variant="h5">{getActivityIcon(activity.activity_type)}</Typography>
+          <Box
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: 2,
+              bgcolor: alpha(colors.accent, 0.08),
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Typography sx={{ fontSize: '1rem' }}>{getActivityIcon(activity.activity_type)}</Typography>
+          </Box>
 
           <Box sx={{ flex: 1, minWidth: 0 }}>
             {activity.agent && (
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-                <Typography variant="body2">{activity.agent.avatar_emoji}</Typography>
-                <Typography variant="body2" fontWeight="medium">
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.75 }}>
+                <Typography sx={{ fontSize: '0.875rem' }}>{activity.agent.avatar_emoji}</Typography>
+                <Typography variant="body2" fontWeight={600}>
                   {activity.agent.name}
                 </Typography>
               </Stack>
             )}
 
-            <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+            <Typography variant="body2" sx={{ wordBreak: 'break-word', lineHeight: 1.5 }}>
               {activity.message}
             </Typography>
 
             {activity.metadata && (
               <Box
                 sx={{
-                  mt: 1,
-                  p: 1,
-                  bgcolor: mcColors.bgTertiary,
-                  borderRadius: 1,
+                  mt: 1.5,
+                  p: 1.5,
+                  bgcolor: colors.bgTertiary,
+                  borderRadius: 2,
                   fontFamily: 'monospace',
                   fontSize: '0.75rem',
                   color: 'text.secondary',
                   whiteSpace: 'pre-wrap',
+                  border: 1,
+                  borderColor: colors.border,
                 }}
               >
                 {typeof activity.metadata === 'string'
@@ -151,7 +172,7 @@ export function ActivityLog({ taskId }: ActivityLogProps) {
               </Box>
             )}
 
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block', opacity: 0.8 }}>
               {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
             </Typography>
           </Box>

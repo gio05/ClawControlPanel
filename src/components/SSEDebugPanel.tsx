@@ -5,7 +5,6 @@ import {
   Box,
   Typography,
   Button,
-  IconButton,
   Chip,
   Collapse,
   Paper,
@@ -15,7 +14,6 @@ import {
   ExpandMore as ChevronDownIcon,
   ChevronRight as ChevronRightIcon,
 } from '@mui/icons-material';
-import { mcColors } from '@/theme/theme';
 
 interface SSELogEntry {
   timestamp: Date;

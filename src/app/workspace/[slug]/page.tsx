@@ -12,9 +12,8 @@ import {
 } from '@mui/material';
 import { ChevronLeft as ChevronLeftIcon } from '@mui/icons-material';
 import { Header } from '@/components/Header';
-import { AgentsSidebar } from '@/components/AgentsSidebar';
+import { WorkspaceSidebar } from '@/components/WorkspaceSidebar';
 import { MissionQueue } from '@/components/MissionQueue';
-import { LiveFeed } from '@/components/LiveFeed';
 import { SSEDebugPanel } from '@/components/SSEDebugPanel';
 import { useMissionControl } from '@/lib/store';
 import { useSSE } from '@/hooks/useSSE';
@@ -32,6 +31,7 @@ export default function WorkspacePage() {
     setIsOnline,
     setIsLoading,
     isLoading,
+    sidebarCollapsed,
   } = useMissionControl();
 
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
@@ -212,18 +212,28 @@ export default function WorkspacePage() {
   }
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default', overflow: 'hidden' }}>
-      <Header workspace={workspace} />
+    <Box sx={{ height: '100vh', display: 'flex', bgcolor: 'background.default', overflow: 'hidden' }}>
+      {/* Workspace Sidebar - Fixed full height */}
+      <WorkspaceSidebar workspaceId={workspace.id} />
 
-      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Agents Sidebar */}
-        <AgentsSidebar workspaceId={workspace.id} />
+      {/* Main Area with Header */}
+      <Box 
+        sx={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          ml: sidebarCollapsed ? '56px' : '320px', 
+          transition: 'margin-left 0.2s ease-in-out',
+          height: '100vh',
+          overflow: 'hidden',
+        }}
+      >
+        <Header workspace={workspace} />
 
-        {/* Main Content Area */}
-        <MissionQueue workspaceId={workspace.id} />
-
-        {/* Live Feed */}
-        <LiveFeed />
+        {/* Main Content Area - Scrollable */}
+        <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <MissionQueue workspaceId={workspace.id} />
+        </Box>
       </Box>
 
       {/* Debug Panel - only shows when debug mode enabled */}
