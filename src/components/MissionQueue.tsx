@@ -152,8 +152,8 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
         sx={{ 
           flex: 1, 
           display: 'flex', 
-          gap: 2, 
-          p: 2, 
+          gap: 3, 
+          p: 3, 
           overflowX: 'auto', 
           overflowY: 'auto',
           bgcolor: 'background.default',
@@ -166,16 +166,11 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
             <Box
               key={column.id}
               sx={{
-                flex: '1 1 240px',
-                minWidth: 240,
+                flex: '1 1 280px',
+                minWidth: 280,
                 maxWidth: 320,
                 display: 'flex',
                 flexDirection: 'column',
-                bgcolor: 'background.paper',
-                borderRadius: 3,
-                border: 1,
-                borderColor: 'divider',
-                overflow: 'hidden',
               }}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
@@ -183,60 +178,85 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
               {/* Column Header */}
               <Box
                 sx={{
-                  p: 1.5,
-                  borderBottom: 1,
-                  borderColor: 'divider',
+                  mb: 2,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  bgcolor: alpha(column.color, 0.04),
                 }}
               >
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Box 
-                    sx={{ 
-                      width: 8, 
-                      height: 8, 
-                      borderRadius: '50%', 
-                      bgcolor: column.color,
-                    }} 
-                  />
-                  <Typography 
-                    variant="body2" 
-                    fontWeight={600} 
-                    color="text.primary"
-                  >
-                    {column.label}
-                  </Typography>
-                </Stack>
-                <Chip
-                  label={columnTasks.length}
-                  size="small"
-                  sx={{ 
-                    height: 22, 
-                    fontSize: 11, 
-                    fontWeight: 600,
-                    bgcolor: alpha(column.color, 0.1),
-                    color: column.color,
+                <Typography 
+                  variant="caption" 
+                  fontWeight={700} 
+                  sx={{
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: 'text.secondary',
                   }}
-                />
+                >
+                  {column.label}
+                </Typography>
+                <Box
+                  sx={{ 
+                    minWidth: 24,
+                    height: 24,
+                    px: 1,
+                    borderRadius: 3,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: alpha(column.color, 0.1),
+                  }}
+                >
+                  <Typography 
+                    variant="caption" 
+                    fontWeight={700}
+                    sx={{ color: column.color }}
+                  >
+                    {columnTasks.length}
+                  </Typography>
+                </Box>
               </Box>
 
               {/* Tasks */}
-              <Box sx={{ flex: 1, overflow: 'auto', p: 1.5 }}>
-                <Stack spacing={1.5}>
-                  {columnTasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      colors={colors}
-                      onDragStart={handleDragStart}
-                      onClick={() => setEditingTask(task)}
-                      isDragging={draggedTask?.id === task.id}
-                    />
-                  ))}
-                </Stack>
-              </Box>
+              <Stack spacing={1.5} sx={{ flex: 1 }}>
+                {columnTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    colors={colors}
+                    onDragStart={handleDragStart}
+                    onClick={() => setEditingTask(task)}
+                    isDragging={draggedTask?.id === task.id}
+                  />
+                ))}
+                
+                {/* Add Task Placeholder */}
+                <Box
+                  onClick={() => setShowCreateModal(true)}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    border: '2px dashed',
+                    borderColor: alpha(colors.textSecondary, 0.2),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease-in-out',
+                    '&:hover': {
+                      borderColor: colors.accent,
+                      bgcolor: alpha(colors.accent, 0.04),
+                    },
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <AddIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                      Add Task
+                    </Typography>
+                  </Stack>
+                </Box>
+              </Stack>
             </Box>
           );
         })}
