@@ -17,11 +17,14 @@ import {
   Settings as SettingsIcon,
   ChevronLeft as ChevronLeftIcon,
   GridView as LayoutGridIcon,
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
 } from '@mui/icons-material';
 import { useMissionControl } from '@/lib/store';
 import { format } from 'date-fns';
 import type { Workspace } from '@/lib/types';
 import { mcColors } from '@/theme/theme';
+import { useThemeMode } from '@/theme/ThemeContext';
 
 interface HeaderProps {
   workspace?: Workspace;
@@ -30,6 +33,7 @@ interface HeaderProps {
 export function Header({ workspace }: HeaderProps) {
   const router = useRouter();
   const { agents, tasks, isOnline } = useMissionControl();
+  const { resolvedMode, toggleTheme } = useThemeMode();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeSubAgents, setActiveSubAgents] = useState(0);
 
@@ -173,6 +177,13 @@ export function Header({ workspace }: HeaderProps) {
               border: 1,
             }}
           />
+          <IconButton
+            onClick={toggleTheme}
+            sx={{ color: 'text.secondary' }}
+            title={resolvedMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {resolvedMode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+          </IconButton>
           <IconButton onClick={() => router.push('/settings')} sx={{ color: 'text.secondary' }}>
             <SettingsIcon />
           </IconButton>
