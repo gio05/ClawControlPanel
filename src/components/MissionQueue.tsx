@@ -17,10 +17,13 @@ import {
   Add as AddIcon,
   ChevronRight as ChevronRightIcon,
   DragIndicator as GripIcon,
+  AccessTime as TimeIcon,
+  Person as PersonIcon,
+  FlagOutlined as FlagIcon,
 } from '@mui/icons-material';
 import { useMissionControl } from '@/lib/store';
 import { triggerAutoDispatch, shouldTriggerAutoDispatch } from '@/lib/auto-dispatch';
-import type { Task, TaskStatus } from '@/lib/types';
+import type { Task, TaskStatus, OpenClawSession } from '@/lib/types';
 import { TaskModal } from './TaskModal';
 import { formatDistanceToNow } from 'date-fns';
 import { getColors } from '@/theme/theme';
@@ -43,7 +46,7 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
     { id: 'done', label: 'Done', color: colors.accentGreen },
   ];
   
-  const { tasks, updateTaskStatus, addEvent } = useMissionControl();
+  const { tasks, updateTaskStatus, addEvent, agentOpenClawSessions } = useMissionControl();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
@@ -225,16 +228,22 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
 
               {/* Tasks */}
               <Stack spacing={1.5} sx={{ flex: 1 }}>
-                {columnTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    colors={colors}
-                    onDragStart={handleDragStart}
-                    onClick={() => setEditingTask(task)}
-                    isDragging={draggedTask?.id === task.id}
-                  />
-                ))}
+                {columnTasks.map((task) => {
+                  const agentSession = task.assigned_agent_id 
+                    ? agentOpenClawSessions[task.assigned_agent_id] 
+                    : null;
+                  return (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      colors={colors}
+                      onDragStart={handleDragStart}
+                      onClick={() => setEditingTask(task)}
+                      isDragging={draggedTask?.id === task.id}
+                      agentSession={agentSession}
+                    />
+                  );
+                })}
                 
                 {/* Add Task Placeholder */}
                 <Box
@@ -285,9 +294,10 @@ interface TaskCardProps {
   onDragStart: (e: React.DragEvent, task: Task) => void;
   onClick: () => void;
   isDragging: boolean;
+  agentSession: OpenClawSession | null;
 }
 
-function TaskCard({ task, colors, onDragStart, onClick, isDragging }: TaskCardProps) {
+function TaskCard({ task, colors, onDragStart, onClick, isDragging, agentSession }: TaskCardProps) {
   const priorityColors = {
     low: colors.accentBlue,
     normal: colors.accent,
@@ -302,7 +312,15 @@ function TaskCard({ task, colors, onDragStart, onClick, isDragging }: TaskCardPr
     urgent: colors.accentRedBg,
   };
 
+  const priorityEmoji = {
+    low: '🔵',
+    normal: '⚪',
+    high: '🟡',
+    urgent: '🔴',
+  };
+
   const isPlanning = task.status === 'planning';
+  const hasDescription = task.description && task.description.trim().length > 0;
 
   return (
     <Card
@@ -311,65 +329,57 @@ function TaskCard({ task, colors, onDragStart, onClick, isDragging }: TaskCardPr
       onClick={onClick}
       sx={{
         cursor: 'pointer',
-        transition: 'all 0.15s ease-in-out',
-        opacity: isDragging ? 0.5 : 1,
-        transform: isDragging ? 'scale(0.98)' : 'none',
-        borderColor: isPlanning ? alpha(colors.accentPurple, 0.3) : 'transparent',
-        boxShadow: 'none',
+        position: 'relative',
+        overflow: 'visible',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        opacity: isDragging ? 0.6 : 1,
+        transform: isDragging ? 'scale(0.95) rotate(2deg)' : 'none',
+        borderLeft: 4,
+        borderColor: priorityColors[task.priority],
+        borderTop: 1,
+        borderRight: 1,
+        borderBottom: 1,
+        borderTopColor: alpha(colors.border, 0.5),
+        borderRightColor: alpha(colors.border, 0.5),
+        borderBottomColor: alpha(colors.border, 0.5),
+        boxShadow: isDragging 
+          ? `0 8px 24px ${alpha(priorityColors[task.priority], 0.3)}`
+          : `0 1px 3px ${alpha(colors.text, 0.04)}`,
+        bgcolor: colors.bgCard,
         '&:hover': {
-          borderColor: isPlanning ? colors.accentPurple : alpha(colors.accent, 0.3),
-          transform: 'translateY(-2px)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          transform: 'translateY(-3px) scale(1.01)',
+          boxShadow: `0 8px 24px ${alpha(colors.text, 0.1)}, 0 0 0 1px ${alpha(priorityColors[task.priority], 0.2)}`,
+          borderTopColor: alpha(priorityColors[task.priority], 0.3),
+          borderRightColor: alpha(priorityColors[task.priority], 0.3),
+          borderBottomColor: alpha(priorityColors[task.priority], 0.3),
         },
-        '&:hover .drag-handle': {
-          opacity: 1,
+        '&:active': {
+          transform: 'scale(0.98)',
         },
+        '&::before': isPlanning ? {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: `linear-gradient(135deg, ${alpha(colors.accentPurple, 0.05)} 0%, transparent 50%)`,
+          pointerEvents: 'none',
+          borderRadius: 'inherit',
+        } : undefined,
       }}
     >
-      {/* Drag handle */}
-      <Box
-        className="drag-handle"
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          py: 0.5,
-          borderBottom: 1,
-          borderColor: 'divider',
-          opacity: 0,
-          transition: 'opacity 0.15s',
-          bgcolor: alpha(colors.accent, 0.02),
-        }}
-      >
-        <GripIcon sx={{ fontSize: 14, color: 'text.secondary', opacity: 0.4, cursor: 'grab' }} />
-      </Box>
-
-      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-        {/* Title */}
-        <Typography
-          variant="body2"
-          fontWeight={600}
-          sx={{
-            mb: 1.5,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            lineHeight: 1.4,
-          }}
-        >
-          {task.title}
-        </Typography>
-
-        {/* Planning mode indicator */}
+      <CardContent sx={{ p: 1.75, '&:last-child': { pb: 1.75 } }}>
+        {/* Planning mode indicator - compact at top */}
         {isPlanning && (
           <Box
             sx={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: 1,
-              mb: 1.5,
-              py: 0.75,
-              px: 1.25,
+              gap: 0.75,
+              mb: 1.25,
+              py: 0.5,
+              px: 1,
               bgcolor: colors.accentPurpleBg,
               borderRadius: 1.5,
               border: 1,
@@ -383,63 +393,253 @@ function TaskCard({ task, colors, onDragStart, onClick, isDragging }: TaskCardPr
                 bgcolor: colors.accentPurple,
                 borderRadius: '50%',
                 animation: 'pulse 2s infinite',
+                boxShadow: `0 0 6px ${alpha(colors.accentPurple, 0.6)}`,
               }}
             />
-            <Typography variant="caption" fontWeight={500} sx={{ color: colors.accentPurple }}>
-              Continue planning
+            <Typography variant="caption" fontWeight={600} sx={{ color: colors.accentPurple, fontSize: '0.65rem' }}>
+              Planning...
             </Typography>
           </Box>
         )}
 
-        {/* Assigned agent */}
-        {task.assigned_agent && (
-          <Box
+        {/* Title */}
+        <Typography
+          variant="body2"
+          fontWeight={600}
+          sx={{
+            mb: hasDescription ? 0.75 : 1.5,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            lineHeight: 1.45,
+            color: colors.text,
+            fontSize: '0.85rem',
+          }}
+        >
+          {task.title}
+        </Typography>
+
+        {/* Description preview */}
+        {hasDescription && (
+          <Typography
+            variant="caption"
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              color: alpha(colors.textSecondary, 0.8),
+              lineHeight: 1.5,
               mb: 1.5,
-              py: 0.5,
-              px: 1,
-              bgcolor: colors.bgTertiary,
-              borderRadius: 1.5,
+              fontSize: '0.72rem',
             }}
           >
-            <Typography sx={{ fontSize: '0.875rem' }}>{(task.assigned_agent as unknown as { avatar_emoji: string }).avatar_emoji}</Typography>
-            <Typography variant="caption" color="text.secondary" fontWeight={500} noWrap>
-              {(task.assigned_agent as unknown as { name: string }).name}
-            </Typography>
-          </Box>
+            {task.description}
+          </Typography>
         )}
 
-        {/* Footer */}
+        {/* Footer: Two rows - Agent/Status and Priority/Time */}
         <Box
           sx={{
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            pt: 1.5,
+            flexDirection: 'column',
+            gap: 1,
             mt: 0.5,
+            pt: 1.5,
             borderTop: 1,
-            borderColor: 'divider',
+            borderColor: alpha(colors.border, 0.3),
           }}
         >
-          <Chip
-            size="small"
-            label={task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-            sx={{
-              height: 20,
-              fontSize: 10,
-              fontWeight: 600,
-              bgcolor: priorityBgColors[task.priority],
-              color: priorityColors[task.priority],
-              border: 1,
-              borderColor: alpha(priorityColors[task.priority], 0.2),
-            }}
-          />
-          <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.7, fontSize: 10 }}>
-            {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
-          </Typography>
+          {/* Row 1: Assigned agent and status */}
+          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            {task.assigned_agent ? (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 0.75,
+                  py: 0.5,
+                  px: 1,
+                  width: '100%',
+                  bgcolor: agentSession 
+                    ? alpha(colors.accentGreen, 0.08)
+                    : alpha(colors.accent, 0.06),
+                  borderRadius: 2,
+                  border: 1,
+                  borderColor: agentSession 
+                    ? alpha(colors.accentGreen, 0.2)
+                    : 'transparent',
+                }}
+              >
+                {/* Left side: Avatar + Agent name */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                  {/* Avatar with status indicator */}
+                  <Box sx={{ position: 'relative', flexShrink: 0 }}>
+                    <Box
+                      sx={{
+                        width: 20,
+                        height: 20,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: agentSession 
+                          ? alpha(colors.accentGreen, 0.15)
+                          : alpha(colors.accent, 0.1),
+                        borderRadius: '50%',
+                        fontSize: '0.7rem',
+                      }}
+                    >
+                      {(task.assigned_agent as unknown as { avatar_emoji: string }).avatar_emoji || '🤖'}
+                    </Box>
+                    {/* Active session indicator dot */}
+                    {agentSession && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          bottom: -1,
+                          right: -1,
+                          width: 8,
+                          height: 8,
+                          bgcolor: colors.accentGreen,
+                          borderRadius: '50%',
+                          border: 2,
+                          borderColor: colors.bgCard,
+                          animation: 'pulse 2s infinite',
+                          boxShadow: `0 0 6px ${alpha(colors.accentGreen, 0.6)}`,
+                        }}
+                      />
+                    )}
+                  </Box>
+                  <Typography 
+                    variant="caption" 
+                    fontWeight={500} 
+                    noWrap
+                    sx={{ 
+                      color: agentSession ? colors.accentGreen : colors.textSecondary,
+                      fontSize: '0.7rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {(task.assigned_agent as unknown as { name: string }).name}
+                  </Typography>
+                </Box>
+
+                {/* Right side: Status badge */}
+                {agentSession ? (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.375,
+                      py: 0.25,
+                      px: 0.625,
+                      bgcolor: alpha(colors.accentGreen, 0.15),
+                      borderRadius: 1,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 5,
+                        height: 5,
+                        bgcolor: colors.accentGreen,
+                        borderRadius: '50%',
+                        animation: 'pulse 2s infinite',
+                      }}
+                    />
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: colors.accentGreen,
+                        fontSize: '0.6rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.3px',
+                      }}
+                    >
+                      Working
+                    </Typography>
+                  </Box>
+                ) : task.status === 'in_progress' ? (
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: alpha(colors.textSecondary, 0.6),
+                      fontSize: '0.6rem',
+                      fontStyle: 'italic',
+                      flexShrink: 0,
+                    }}
+                  >
+                    Idle
+                  </Typography>
+                ) : null}
+              </Box>
+            ) : (
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: alpha(colors.textSecondary, 0.5),
+                  fontSize: '0.7rem',
+                  fontStyle: 'italic',
+                }}
+              >
+                No agent assigned
+              </Typography>
+            )}
+          </Box>
+
+          {/* Row 2: Priority and Time */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            {/* Priority badge */}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                py: 0.375,
+                px: 0.875,
+                bgcolor: priorityBgColors[task.priority],
+                borderRadius: 1.5,
+                border: 1,
+                borderColor: alpha(priorityColors[task.priority], 0.2),
+              }}
+            >
+              <Typography sx={{ fontSize: '0.6rem', lineHeight: 1 }}>
+                {priorityEmoji[task.priority]}
+              </Typography>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  fontSize: '0.65rem',
+                  fontWeight: 600,
+                  color: priorityColors[task.priority],
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.3px',
+                }}
+              >
+                {task.priority}
+              </Typography>
+            </Box>
+
+            {/* Time */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <TimeIcon sx={{ fontSize: 11, color: 'text.disabled' }} />
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: 'text.disabled',
+                  fontSize: '0.65rem',
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
+              </Typography>
+            </Box>
+          </Box>
         </Box>
       </CardContent>
     </Card>
