@@ -115,7 +115,7 @@ export async function GET(
         a.avatar_emoji as agent_avatar_emoji
       FROM openclaw_sessions s
       LEFT JOIN agents a ON s.agent_id = a.id
-      WHERE s.task_id = ? AND s.session_type = 'subagent'
+      WHERE s.task_id = ?
       ORDER BY s.created_at DESC
     `).all(taskId);
 
