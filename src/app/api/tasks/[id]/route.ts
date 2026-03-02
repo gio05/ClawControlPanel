@@ -105,8 +105,9 @@ export async function PATCH(
       updates.push('status = ?');
       values.push(validatedData.status);
 
-      // Auto-dispatch when moving to assigned
-      if (validatedData.status === 'assigned' && existing.assigned_agent_id) {
+      // Auto-dispatch when moving to dispatchable status with assigned agent
+      const dispatchableStatuses = ['inbox', 'assigned', 'in_progress'];
+      if (dispatchableStatuses.includes(validatedData.status) && existing.assigned_agent_id) {
         shouldDispatch = true;
       }
 
@@ -133,8 +134,10 @@ export async function PATCH(
             [uuidv4(), 'task_assigned', validatedData.assigned_agent_id, id, `"${existing.title}" assigned to ${agent.name}`, now]
           );
 
-          // Auto-dispatch if already in assigned status or being assigned now
-          if (existing.status === 'assigned' || validatedData.status === 'assigned') {
+          // Auto-dispatch when agent is assigned to dispatchable statuses
+          const dispatchableStatuses = ['inbox', 'assigned', 'in_progress'];
+          const newStatus = validatedData.status ?? existing.status;
+          if (dispatchableStatuses.includes(newStatus)) {
             shouldDispatch = true;
           }
         }

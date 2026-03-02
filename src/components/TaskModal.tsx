@@ -101,7 +101,13 @@ export function TaskModal({ task, onClose, workspaceId }: TaskModalProps) {
         if (task) {
           updateTask(savedTask);
 
-          if (shouldTriggerAutoDispatch(task.status, savedTask.status, savedTask.assigned_agent_id)) {
+          // Check if we should auto-dispatch (status changed or agent assigned)
+          if (shouldTriggerAutoDispatch(
+            task.status, 
+            savedTask.status, 
+            savedTask.assigned_agent_id,
+            task.assigned_agent_id  // Previous agent ID
+          )) {
             const result = await triggerAutoDispatch({
               taskId: savedTask.id,
               taskTitle: savedTask.title,

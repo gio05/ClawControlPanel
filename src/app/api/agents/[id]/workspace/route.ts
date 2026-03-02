@@ -118,10 +118,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const updatedAgent = queryOne<Agent>('SELECT * FROM agents WHERE id = ?', [id]);
+    
+    // Provide helpful message if sync didn't work
+    const noFilesFound = !workspaceFiles.soul_md && !workspaceFiles.user_md && !workspaceFiles.agents_md;
+    
     return NextResponse.json({
       synced: updates.length > 0,
       agent: updatedAgent,
       workspace: workspaceFiles,
+      ...(noFilesFound && {
+        message: 'The OpenClaw Gateway does not support workspace.read RPC. Workspace files (SOUL.md, USER.md, AGENTS.md) must be entered manually in Mission Control.',
+        hint: 'Edit the agent and paste the workspace file contents into the SOUL.md, USER.md, and AGENTS.md tabs.'
+      }),
     });
   } catch (error) {
     console.error('Failed to sync agent workspace files:', error);

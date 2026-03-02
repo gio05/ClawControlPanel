@@ -438,8 +438,26 @@ export class OpenClawClient extends EventEmitter {
     return this.call<OpenClawSessionInfo[]>('sessions.list');
   }
 
-  async getSessionHistory(sessionId: string): Promise<unknown[]> {
-    return this.call<unknown[]>('sessions.history', { session_id: sessionId });
+  async getSessionHistory(sessionKey: string): Promise<unknown[]> {
+    // The correct RPC method is chat.history with sessionKey parameter
+    try {
+      const result = await this.call<{ sessionKey: string; sessionId: string; messages: unknown[] }>('chat.history', { sessionKey });
+      
+      // Gateway returns { sessionKey, sessionId, messages: [...] }
+      if (result && typeof result === 'object' && 'messages' in result) {
+        return result.messages;
+      }
+      
+      // Fallback: if the response is already an array
+      if (Array.isArray(result)) {
+        return result;
+      }
+      
+      return [];
+    } catch (err) {
+      console.log(`[OpenClaw] chat.history failed for ${sessionKey}:`, (err as Error).message);
+      throw err;
+    }
   }
 
   async sendMessage(sessionId: string, content: string): Promise<void> {
@@ -465,37 +483,103 @@ export class OpenClawClient extends EventEmitter {
   }
 
   /**
+   * Get detailed agent info including workspace files.
+   * Note: Most OpenClaw Gateway versions don't expose workspace files via RPC.
+   * Returns null if the method is not available.
+   */
+  async getAgentDetails(agentId: string): Promise<Record<string, unknown> | null> {
+    const methods = [
+      { method: 'agents.get', params: { agent_id: agentId } },
+      { method: 'agents.describe', params: { agent_id: agentId } },
+    ];
+
+    for (const { method, params } of methods) {
+      try {
+        const result = await this.call<Record<string, unknown>>(method, params);
+        if (result && typeof result === 'object') {
+          return result;
+        }
+      } catch {
+        // Method not available, continue
+      }
+    }
+    return null;
+  }
+
+  /**
    * Read a workspace file from an agent's OpenClaw workspace.
-   * Uses the workspace.read RPC method with the agent's session key.
+   * Note: This requires the gateway to implement 'workspace.read' RPC method.
+   * Most gateway versions don't support this - workspace files are stored on 
+   * the gateway's filesystem and not accessible via RPC.
    * Returns null if the method is not available or the file does not exist.
    */
   async readAgentWorkspaceFile(agentId: string, filePath: string): Promise<string | null> {
     const sessionKey = `agent:main:${agentId}`;
+
     try {
       const result = await this.call<{ content?: string; text?: string; data?: string } | string>(
         'workspace.read',
         { sessionKey, path: filePath }
       );
-      if (typeof result === 'string') {
-        return result;
-      }
-      if (result && typeof result === 'object') {
-        const content = (result as Record<string, unknown>).content
-          ?? (result as Record<string, unknown>).text
-          ?? (result as Record<string, unknown>).data;
-        if (typeof content === 'string') {
-          return content;
-        }
-      }
-      return null;
+      return this.extractContent(result);
     } catch {
-      // workspace.read not available or file doesn't exist — not an error
+      // workspace.read not available - this is expected for most gateway versions
       return null;
     }
   }
 
   /**
+   * Extract content from a workspace read response.
+   */
+  private extractContent(result: unknown): string | null {
+    if (typeof result === 'string') {
+      return result;
+    }
+    if (result && typeof result === 'object') {
+      const content = (result as Record<string, unknown>).content
+        ?? (result as Record<string, unknown>).text
+        ?? (result as Record<string, unknown>).data;
+      if (typeof content === 'string') {
+        return content;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Extract a workspace field from an agent details object.
+   * Tries multiple possible field names.
+   */
+  private extractWorkspaceField(obj: Record<string, unknown>, ...keys: string[]): string | null {
+    for (const key of keys) {
+      const value = obj[key];
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value;
+      }
+    }
+    // Also check nested workspace object
+    const workspace = obj.workspace as Record<string, unknown> | undefined;
+    if (workspace && typeof workspace === 'object') {
+      for (const key of keys) {
+        const value = workspace[key];
+        if (typeof value === 'string' && value.trim().length > 0) {
+          return value;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
    * Fetch all workspace files (SOUL.md, USER.md, AGENTS.md) for a gateway agent.
+   * 
+   * NOTE: Most OpenClaw Gateway versions do NOT expose workspace files via RPC.
+   * The workspace files (SOUL.md, USER.md, AGENTS.md) are stored on the gateway's 
+   * filesystem and require either:
+   * 1. A shared filesystem between gateway and Mission Control
+   * 2. The gateway implementing a 'workspace.read' RPC method
+   * 3. Manual entry of workspace files in Mission Control UI
+   * 
    * Returns an object with whichever files were successfully read.
    */
   async getAgentWorkspaceFiles(agentId: string): Promise<{
@@ -503,11 +587,25 @@ export class OpenClawClient extends EventEmitter {
     user_md: string | null;
     agents_md: string | null;
   }> {
+    // First, try to get agent details which may include workspace files
+    const details = await this.getAgentDetails(agentId);
+    if (details) {
+      const extractedSoul = this.extractWorkspaceField(details, 'soul_md', 'soulMd', 'soul', 'SOUL');
+      const extractedUser = this.extractWorkspaceField(details, 'user_md', 'userMd', 'user', 'USER');
+      const extractedAgents = this.extractWorkspaceField(details, 'agents_md', 'agentsMd', 'agents', 'AGENTS');
+      
+      if (extractedSoul || extractedUser || extractedAgents) {
+        return { soul_md: extractedSoul, user_md: extractedUser, agents_md: extractedAgents };
+      }
+    }
+
+    // Try to read via workspace.read RPC (may not be available)
     const [soul_md, user_md, agents_md] = await Promise.all([
       this.readAgentWorkspaceFile(agentId, 'SOUL.md'),
       this.readAgentWorkspaceFile(agentId, 'USER.md'),
       this.readAgentWorkspaceFile(agentId, 'AGENTS.md'),
     ]);
+
     return { soul_md, user_md, agents_md };
   }
 

@@ -40,17 +40,44 @@ export async function triggerAutoDispatch(options: AutoDispatchOptions): Promise
 }
 
 /**
- * Check if a task should trigger auto-dispatch when status changes
- * Returns true if status changed to 'in_progress' and task has assigned agent
+ * Check if a task should trigger auto-dispatch when status or assignment changes
+ * Returns true if:
+ * 1. Status changed to 'in_progress' and task has assigned agent
+ * 2. Status changed to 'assigned' and task has assigned agent
+ * 3. Agent was just assigned (previousAgentId was null, now has agent)
  */
 export function shouldTriggerAutoDispatch(
   previousStatus: string | undefined,
   newStatus: string,
-  assignedAgentId: string | null
+  assignedAgentId: string | null,
+  previousAgentId?: string | null
 ): boolean {
+  const hasAssignedAgent = !!assignedAgentId;
+  
+  if (!hasAssignedAgent) {
+    return false;
+  }
+
+  // Case 1: Status changed to 'in_progress'
   const wasNotInProgress = previousStatus !== 'in_progress';
   const isNowInProgress = newStatus === 'in_progress';
-  const hasAssignedAgent = !!assignedAgentId;
+  if (wasNotInProgress && isNowInProgress) {
+    return true;
+  }
 
-  return wasNotInProgress && isNowInProgress && hasAssignedAgent;
+  // Case 2: Status changed to 'assigned'
+  const wasNotAssigned = previousStatus !== 'assigned';
+  const isNowAssigned = newStatus === 'assigned';
+  if (wasNotAssigned && isNowAssigned) {
+    return true;
+  }
+
+  // Case 3: Agent was just assigned (for any dispatchable status)
+  const agentJustAssigned = !previousAgentId && !!assignedAgentId;
+  const dispatchableStatuses = ['inbox', 'assigned', 'in_progress'];
+  if (agentJustAssigned && dispatchableStatuses.includes(newStatus)) {
+    return true;
+  }
+
+  return false;
 }

@@ -86,7 +86,13 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
           created_at: new Date().toISOString(),
         });
 
-        if (shouldTriggerAutoDispatch(draggedTask.status, targetStatus, draggedTask.assigned_agent_id)) {
+        // Check if we should auto-dispatch (only status changes here, agent stays the same)
+        if (shouldTriggerAutoDispatch(
+          draggedTask.status, 
+          targetStatus, 
+          draggedTask.assigned_agent_id,
+          draggedTask.assigned_agent_id  // Same agent (no change)
+        )) {
           const result = await triggerAutoDispatch({
             taskId: draggedTask.id,
             taskTitle: draggedTask.title,

@@ -152,6 +152,19 @@ export async function POST(request: NextRequest) {
         payload: task,
       });
     }
+
+    // Auto-dispatch if task is created with an assigned agent and dispatchable status
+    const dispatchableStatuses = ['inbox', 'assigned', 'in_progress'];
+    if (validatedData.assigned_agent_id && dispatchableStatuses.includes(status)) {
+      const { getMissionControlUrl } = await import('@/lib/config');
+      const missionControlUrl = getMissionControlUrl();
+      fetch(`${missionControlUrl}/api/tasks/${id}/dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      }).catch(err => {
+        console.error('Auto-dispatch on create failed:', err);
+      });
+    }
     
     return NextResponse.json(task, { status: 201 });
   } catch (error) {

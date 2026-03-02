@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { queryOne, queryAll, run, transaction } from '@/lib/db';
+import { getOpenClawClient } from '@/lib/openclaw/client';
 import type { Agent } from '@/lib/types';
 
 interface ImportAgentRequest {
@@ -50,6 +51,9 @@ export async function POST(request: NextRequest) {
       skipped: [],
     };
 
+    // Track agents that need workspace file sync (id -> gateway_agent_id)
+    const agentsToSync: { id: string; gateway_agent_id: string }[] = [];
+
     transaction(() => {
       const now = new Date().toISOString();
 
@@ -98,9 +102,71 @@ export async function POST(request: NextRequest) {
         const agent = queryOne<Agent>('SELECT * FROM agents WHERE id = ?', [id]);
         if (agent) {
           results.imported.push(agent);
+          // Mark for workspace sync if no workspace files were provided in the request
+          if (!agentReq.soul_md && !agentReq.user_md && !agentReq.agents_md) {
+            agentsToSync.push({ id, gateway_agent_id: agentReq.gateway_agent_id });
+          }
         }
       }
     });
+
+    // After transaction completes, sync workspace files from gateway for each imported agent
+    if (agentsToSync.length > 0) {
+      const client = getOpenClawClient();
+      let connected = client.isConnected();
+      if (!connected) {
+        try {
+          await client.connect();
+          connected = true;
+        } catch {
+          // If we can't connect, skip workspace sync but don't fail the import
+          console.warn('Could not connect to OpenClaw Gateway for workspace sync');
+        }
+      }
+
+      if (connected) {
+        for (const { id, gateway_agent_id } of agentsToSync) {
+          try {
+            const workspaceFiles = await client.getAgentWorkspaceFiles(gateway_agent_id);
+            
+            const updates: string[] = [];
+            const values: unknown[] = [];
+
+            if (workspaceFiles.soul_md !== null) {
+              updates.push('soul_md = ?');
+              values.push(workspaceFiles.soul_md);
+            }
+            if (workspaceFiles.user_md !== null) {
+              updates.push('user_md = ?');
+              values.push(workspaceFiles.user_md);
+            }
+            if (workspaceFiles.agents_md !== null) {
+              updates.push('agents_md = ?');
+              values.push(workspaceFiles.agents_md);
+            }
+
+            if (updates.length > 0) {
+              updates.push('updated_at = ?');
+              values.push(new Date().toISOString());
+              values.push(id);
+              run(`UPDATE agents SET ${updates.join(', ')} WHERE id = ?`, values);
+
+              // Update the agent in results with the synced workspace files
+              const idx = results.imported.findIndex((a) => a.id === id);
+              if (idx !== -1) {
+                const updatedAgent = queryOne<Agent>('SELECT * FROM agents WHERE id = ?', [id]);
+                if (updatedAgent) {
+                  results.imported[idx] = updatedAgent;
+                }
+              }
+            }
+          } catch (err) {
+            console.warn(`Failed to sync workspace files for agent ${gateway_agent_id}:`, err);
+            // Continue with other agents
+          }
+        }
+      }
+    }
 
     return NextResponse.json(results, { status: 201 });
   } catch (error) {

@@ -102,7 +102,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!session) {
       // Create session record
       const sessionId = uuidv4();
-      const openclawSessionId = `mission-control-${agent.name.toLowerCase().replace(/\s+/g, '-')}`;
+      
+      // For gateway-imported agents, use their gateway_agent_id as the session ID
+      // For local agents, create a mission-control prefixed session
+      const openclawSessionId = agent.gateway_agent_id 
+        ? agent.gateway_agent_id 
+        : `mission-control-${agent.name.toLowerCase().replace(/\s+/g, '-')}`;
       
       run(
         `INSERT INTO openclaw_sessions (id, agent_id, openclaw_session_id, channel, status, created_at, updated_at)
@@ -155,7 +160,7 @@ ${task.due_date ? `**Due:** ${task.due_date}\n` : ''}
 **OUTPUT DIRECTORY:** ${taskProjectDir}
 Create this directory and save all deliverables there.
 
-**IMPORTANT:** After completing work, you MUST call these APIs:
+**OPTIONAL API calls** (only if reachable - these may fail if you're on a remote server):
 1. Log activity: POST ${missionControlUrl}/api/tasks/${task.id}/activities
    Body: {"activity_type": "completed", "message": "Description of what was done"}
 2. Register deliverable: POST ${missionControlUrl}/api/tasks/${task.id}/deliverables
@@ -163,8 +168,10 @@ Create this directory and save all deliverables there.
 3. Update status: PATCH ${missionControlUrl}/api/tasks/${task.id}
    Body: {"status": "review"}
 
-When complete, reply with:
+**MANDATORY:** When complete, you MUST reply with this message (even if the API calls above fail):
 \`TASK_COMPLETE: [brief summary of what you did]\`
+
+This message is monitored by Mission Control and will update your task status automatically.
 
 If you need help or clarification, ask the orchestrator.`;
 
