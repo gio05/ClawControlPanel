@@ -7,6 +7,7 @@ import { createHash } from 'crypto';
 
 const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL || 'ws://127.0.0.1:18789';
 const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || '';
+const DEBUG = process.env.OPENCLAW_DEBUG === 'true' || process.env.DEBUG === 'true';
 
 // Global deduplication cache that persists across module reloads in Next.js dev
 // Use globalThis to ensure it's shared across all instances
@@ -241,7 +242,10 @@ export class OpenClawClient extends EventEmitter {
 
               // Skip if we've already processed this event (using global cache for all instances)
               if (globalProcessedEvents.has(eventId)) {
-                console.log('[OpenClaw] Skipping duplicate event:', eventId.slice(0, 16));
+                // Only log in debug mode - duplicates are expected from WebSocket reconnections
+                if (DEBUG) {
+                  console.log('[OpenClaw] Skipping duplicate event:', eventId.slice(0, 16));
+                }
                 return;
               }
 
@@ -466,6 +470,64 @@ export class OpenClawClient extends EventEmitter {
 
   async createSession(channel: string, peer?: string): Promise<OpenClawSessionInfo> {
     return this.call<OpenClawSessionInfo>('sessions.create', { channel, peer });
+  }
+
+  /**
+   * Spawn a sub-agent session via RPC.
+   * Tries multiple RPC methods: chat.spawn, sessions.spawn, sessions_spawn
+   * Returns immediately with { status, runId, childSessionKey }.
+   * The sub-agent runs in the background and announces back when complete.
+   * 
+   * @param sessionKey - The parent session key (e.g., agent:main:manager)
+   * @param params - Spawn parameters
+   */
+  async spawnSubAgent(params: {
+    sessionKey: string;  // Required: parent session to spawn from
+    task: string;
+    label?: string;
+    agentId?: string;
+    model?: string;
+    thinking?: string;
+    runTimeoutSeconds?: number;
+    thread?: boolean;
+    mode?: 'run' | 'session';
+    cleanup?: 'delete' | 'keep';
+    sandbox?: 'inherit' | 'require';
+  }): Promise<{
+    status: 'accepted' | 'rejected';
+    runId: string;
+    childSessionKey: string;
+  }> {
+    // Try multiple RPC methods - Gateway implementations vary
+    const rpcMethods = ['chat.spawn', 'sessions.spawn', 'sessions_spawn'];
+    
+    for (const method of rpcMethods) {
+      try {
+        const result = await this.call<{
+          status?: 'accepted' | 'rejected';
+          ok?: boolean;
+          runId?: string;
+          childSessionKey?: string;
+          sessionKey?: string;
+        }>(method, params);
+        
+        // Normalize response - different gateways may return different formats
+        const status = result.status || (result.ok ? 'accepted' : 'rejected');
+        const childSessionKey = result.childSessionKey || result.sessionKey || '';
+        const runId = result.runId || '';
+        
+        if (status === 'accepted' && childSessionKey) {
+          console.log(`[OpenClaw] spawnSubAgent succeeded via ${method}`);
+          return { status: 'accepted', runId, childSessionKey };
+        }
+      } catch (err) {
+        console.log(`[OpenClaw] spawnSubAgent via ${method} failed:`, (err as Error).message);
+        // Continue to next method
+      }
+    }
+    
+    // All methods failed
+    throw new Error('Sub-agent spawn not supported by this Gateway (tried: chat.spawn, sessions.spawn, sessions_spawn)');
   }
 
   // Agent methods

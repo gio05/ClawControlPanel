@@ -316,12 +316,13 @@ export type SSEEventType =
 
 export interface SSEEvent {
   type: SSEEventType;
-  payload: Task | TaskActivity | TaskDeliverable | {
+  payload: Task | TaskActivity | TaskDeliverable | Agent | {
     taskId: string;
     sessionId: string;
     agentName?: string;
     summary?: string;
     deleted?: boolean;
+    runId?: string | null;
   } | {
     id: string;  // For task_deleted events
   };

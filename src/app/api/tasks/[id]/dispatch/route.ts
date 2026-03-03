@@ -91,57 +91,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Get or create OpenClaw session for this agent
+    // Get or create OpenClaw session for this agent AND this specific task
+    // Each task gets its own dedicated session for tracking
     let session = queryOne<OpenClawSession>(
-      'SELECT * FROM openclaw_sessions WHERE agent_id = ? AND status = ?',
-      [agent.id, 'active']
+      'SELECT * FROM openclaw_sessions WHERE agent_id = ? AND task_id = ? AND status = ?',
+      [agent.id, id, 'active']
     );
 
     const now = new Date().toISOString();
-
-    if (!session) {
-      // Create session record
-      const sessionId = uuidv4();
-      
-      // For gateway-imported agents, use their gateway_agent_id as the session ID
-      // For local agents, create a mission-control prefixed session
-      const openclawSessionId = agent.gateway_agent_id 
-        ? agent.gateway_agent_id 
-        : `mission-control-${agent.name.toLowerCase().replace(/\s+/g, '-')}`;
-      
-      run(
-        `INSERT INTO openclaw_sessions (id, agent_id, openclaw_session_id, channel, status, task_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [sessionId, agent.id, openclawSessionId, 'mission-control', 'active', id, now, now]
-      );
-
-      session = queryOne<OpenClawSession>(
-        'SELECT * FROM openclaw_sessions WHERE id = ?',
-        [sessionId]
-      );
-
-      // Log session creation
-      run(
-        `INSERT INTO events (id, type, agent_id, message, created_at)
-         VALUES (?, ?, ?, ?, ?)`,
-        [uuidv4(), 'agent_status_changed', agent.id, `${agent.name} session created`, now]
-      );
-    }
-
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Failed to create agent session' },
-        { status: 500 }
-      );
-    }
-
-    // Update session to link to current task
-    run(
-      `UPDATE openclaw_sessions SET task_id = ?, updated_at = ? WHERE id = ?`,
-      [id, now, session.id]
-    );
-
-    // Build task message for agent
+    
+    // Build task message for agent (used both in spawn and fallback)
     const priorityEmoji = {
       low: '🔵',
       normal: '⚪',
@@ -181,68 +140,174 @@ This message is monitored by Mission Control and will update your task status au
 
 If you need help or clarification, ask the orchestrator.`;
 
-    // Send message to agent's session using chat.send
-    try {
-      // Use sessionKey for routing to the agent's session
-      // Format: agent:main:{openclaw_session_id}
-      const sessionKey = `agent:main:${session.openclaw_session_id}`;
-      await client.call('chat.send', {
-        sessionKey,
-        message: taskMessage,
-        idempotencyKey: `dispatch-${task.id}-${Date.now()}`
-      });
+    // Track whether spawn was successful (determines if we need chat.send fallback)
+    let spawnSuccessful = false;
 
-      // Update task status to in_progress
-      run(
-        'UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?',
-        ['in_progress', now, id]
-      );
-
-      // Broadcast task update
-      const updatedTask = queryOne<Task>('SELECT * FROM tasks WHERE id = ?', [id]);
-      if (updatedTask) {
-        broadcast({
-          type: 'task_updated',
-          payload: updatedTask,
+    if (!session) {
+      // Spawn a new sub-agent session in OpenClaw Gateway for this task
+      // Uses chat.spawn/sessions.spawn which creates a real background sub-agent run
+      // The task parameter contains the full instruction - sub-agent starts working immediately
+      // Session key format: agent:<agentId>:subagent:<uuid>
+      const sessionId = uuidv4();
+      
+      // Determine the agent ID to spawn the sub-agent for
+      // For gateway-imported agents, use their gateway_agent_id
+      const targetAgentId = agent.gateway_agent_id || agent.name.toLowerCase().replace(/\s+/g, '-');
+      const taskLabel = `task-${id.slice(0, 8)}`;
+      
+      // Parent session key - the agent's main session
+      const parentSessionKey = `agent:main:${targetAgentId}`;
+      
+      let openclawSessionId: string;
+      let runId: string | null = null;
+      
+      try {
+        // Call spawn RPC on the Gateway to spawn a real sub-agent
+        // The 'task' parameter is the full instruction - sub-agent begins working immediately
+        // This is non-blocking and returns immediately with runId and childSessionKey
+        const spawnResult = await client.spawnSubAgent({
+          sessionKey: parentSessionKey,  // Parent session to spawn from
+          task: taskMessage,  // Full task instruction including completion format
+          label: taskLabel,
+          agentId: targetAgentId,
+          mode: 'run',  // One-shot mode for task execution
+          cleanup: 'keep',  // Keep transcript for review
+          runTimeoutSeconds: 3600,  // 1 hour timeout
         });
+        
+        if (spawnResult.status === 'accepted') {
+          // The gateway returns the child session key in format: agent:<agentId>:subagent:<uuid>
+          openclawSessionId = spawnResult.childSessionKey;
+          runId = spawnResult.runId;
+          spawnSuccessful = true;
+          console.log(`[Dispatch] Spawned sub-agent in Gateway: ${openclawSessionId} (runId: ${runId}) for agent ${agent.name}`);
+        } else {
+          throw new Error('Sub-agent spawn rejected by Gateway');
+        }
+      } catch (spawnErr) {
+        // If Gateway spawn fails, fall back to using agent's main session with chat.send
+        console.warn(`[Dispatch] Failed to spawn sub-agent, will use chat.send fallback:`, (spawnErr as Error).message);
+        openclawSessionId = parentSessionKey;
       }
-
-      // Update agent status to working
+      
+      // Record the session in our local database
       run(
-        'UPDATE agents SET status = ?, updated_at = ? WHERE id = ?',
-        ['working', now, agent.id]
+        `INSERT INTO openclaw_sessions (id, agent_id, openclaw_session_id, channel, status, task_id, session_type, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [sessionId, agent.id, openclawSessionId, `task:${id}`, 'active', id, 'subagent', now, now]
       );
 
-      // Log dispatch event to events table
-      const eventId = uuidv4();
-      run(
-        `INSERT INTO events (id, type, agent_id, task_id, message, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [eventId, 'task_dispatched', agent.id, task.id, `Task "${task.title}" dispatched to ${agent.name}`, now]
+      session = queryOne<OpenClawSession>(
+        'SELECT * FROM openclaw_sessions WHERE id = ?',
+        [sessionId]
       );
 
-      // Log dispatch activity to task_activities table (for Activity tab)
-      const activityId = crypto.randomUUID();
+      // Log session spawn event
       run(
-        `INSERT INTO task_activities (id, task_id, agent_id, activity_type, message, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [activityId, task.id, agent.id, 'status_changed', `Task dispatched to ${agent.name} - Agent is now working on this task`, now]
+        `INSERT INTO events (id, type, agent_id, message, created_at)
+         VALUES (?, ?, ?, ?, ?)`,
+        [uuidv4(), 'agent_spawned', agent.id, `Sub-agent spawned for task: ${task.title}${runId ? ` (runId: ${runId})` : ''}`, now]
       );
-
-      return NextResponse.json({
-        success: true,
-        task_id: task.id,
-        agent_id: agent.id,
-        session_id: session.openclaw_session_id,
-        message: 'Task dispatched to agent'
+      
+      // Also log spawn activity in task_activities
+      run(
+        `INSERT INTO task_activities (id, task_id, agent_id, activity_type, message, metadata, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [uuidv4(), id, agent.id, 'spawned', `Sub-agent spawned: ${agent.name} assigned to work on this task`, 
+         JSON.stringify({ runId, childSessionKey: openclawSessionId, spawnSuccessful }), now]
+      );
+      
+      // Broadcast agent_spawned event for real-time UI updates
+      broadcast({
+        type: 'agent_spawned',
+        payload: {
+          taskId: id,
+          sessionId: openclawSessionId,
+          agentName: agent.name,
+          runId,
+        },
       });
-    } catch (err) {
-      console.error('Failed to send message to agent:', err);
+    }
+
+    if (!session) {
       return NextResponse.json(
-        { error: 'Internal server error' },
+        { error: 'Failed to create agent session' },
         { status: 500 }
       );
     }
+
+    // Only send chat.send if spawn failed (fallback mode) or if session already existed
+    // When spawn is successful, the sub-agent already received the task via the spawn command
+    if (!spawnSuccessful) {
+      try {
+        // Fallback: Use sessionKey for routing to the agent's main session
+        // Format depends on whether it's a gateway agent or local agent
+        const sessionKey = session.openclaw_session_id.startsWith('agent:')
+          ? session.openclaw_session_id
+          : `agent:main:${session.openclaw_session_id}`;
+          
+        await client.call('chat.send', {
+          sessionKey,
+          message: taskMessage,
+          idempotencyKey: `dispatch-${task.id}-${Date.now()}`
+        });
+        console.log(`[Dispatch] Sent task via chat.send to ${sessionKey}`);
+      } catch (err) {
+        console.error('Failed to send message to agent:', err);
+        return NextResponse.json(
+          { error: 'Failed to dispatch task to agent' },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Update task status to in_progress
+    run(
+      'UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?',
+      ['in_progress', now, id]
+    );
+
+    // Broadcast task update
+    const updatedTask = queryOne<Task>('SELECT * FROM tasks WHERE id = ?', [id]);
+    if (updatedTask) {
+      broadcast({
+        type: 'task_updated',
+        payload: updatedTask,
+      });
+    }
+
+    // Update agent status to working
+    run(
+      'UPDATE agents SET status = ?, updated_at = ? WHERE id = ?',
+      ['working', now, agent.id]
+    );
+
+    // Log dispatch event to events table
+    const eventId = uuidv4();
+    run(
+      `INSERT INTO events (id, type, agent_id, task_id, message, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [eventId, 'task_dispatched', agent.id, task.id, `Task "${task.title}" dispatched to ${agent.name}${spawnSuccessful ? ' (via sub-agent spawn)' : ' (via chat.send)'}`, now]
+    );
+
+    // Log dispatch activity to task_activities table (for Activity tab)
+    const activityId = crypto.randomUUID();
+    run(
+      `INSERT INTO task_activities (id, task_id, agent_id, activity_type, message, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [activityId, task.id, agent.id, 'status_changed', `Task dispatched to ${agent.name} - Agent is now working on this task`, now]
+    );
+
+    return NextResponse.json({
+      success: true,
+      task_id: task.id,
+      agent_id: agent.id,
+      session_id: session.openclaw_session_id,
+      spawn_method: spawnSuccessful ? 'sessions.spawn' : 'chat.send',
+      message: spawnSuccessful 
+        ? 'Task dispatched via sub-agent spawn - agent is working in background'
+        : 'Task dispatched via chat.send to agent main session'
+    });
   } catch (error) {
     console.error('Failed to dispatch task:', error);
     return NextResponse.json(

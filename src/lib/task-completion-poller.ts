@@ -210,10 +210,23 @@ export async function pollForTaskCompletions(): Promise<PollResult> {
               ['standby', now, session.agent_id]
             );
 
-            // Broadcast update
+            // Close the OpenClaw session for this task
+            run(
+              `UPDATE openclaw_sessions SET status = ?, ended_at = ?, updated_at = ? 
+               WHERE task_id = ? AND status = ?`,
+              ['completed', now, now, session.task_id, 'active']
+            );
+
+            // Broadcast task update
             const updatedTask = queryOne<Task>('SELECT * FROM tasks WHERE id = ?', [session.task_id]);
             if (updatedTask) {
               broadcast({ type: 'task_updated', payload: updatedTask });
+            }
+
+            // Broadcast agent status update
+            const updatedAgent = queryOne<Agent>('SELECT * FROM agents WHERE id = ?', [session.agent_id]);
+            if (updatedAgent) {
+              broadcast({ type: 'agent_updated', payload: updatedAgent });
             }
 
             result.tasksUpdated++;

@@ -171,6 +171,13 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Close the OpenClaw session for this task
+      run(
+        `UPDATE openclaw_sessions SET status = ?, ended_at = ?, updated_at = ? 
+         WHERE task_id = ? AND status = ?`,
+        ['completed', now, now, task.id, 'active']
+      );
+
       // Log completion with summary
       run(
         `INSERT INTO events (id, type, agent_id, task_id, message, created_at)

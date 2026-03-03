@@ -111,6 +111,25 @@ export async function PATCH(
         shouldDispatch = true;
       }
 
+      // Close session when task is completed or moved to review/done/testing
+      const completionStatuses = ['done', 'review', 'testing'];
+      if (completionStatuses.includes(validatedData.status)) {
+        // Close any active sessions for this task
+        run(
+          `UPDATE openclaw_sessions SET status = ?, ended_at = ?, updated_at = ? 
+           WHERE task_id = ? AND status = ?`,
+          ['completed', now, now, id, 'active']
+        );
+        
+        // Update agent status to standby if they were working on this task
+        if (existing.assigned_agent_id) {
+          run(
+            'UPDATE agents SET status = ?, updated_at = ? WHERE id = ? AND status = ?',
+            ['standby', now, existing.assigned_agent_id, 'working']
+          );
+        }
+      }
+
       // Log status change event
       const eventType = validatedData.status === 'done' ? 'task_completed' : 'task_status_changed';
       run(
